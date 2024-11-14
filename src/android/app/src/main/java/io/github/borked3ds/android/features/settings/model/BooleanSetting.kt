@@ -37,6 +37,7 @@ enum class BooleanSetting(
     SKIP_CPU_WRITE("skip_cpu_write", Settings.SECTION_RENDERER, false),
     UPSCALING_HACK("upscaling_hack", Settings.SECTION_RENDERER, false),
     SWAP_EYES_3D("swap_eyes_3d", Settings.SECTION_RENDERER, false),
+    DISABLE_RIGHT_EYE_RENDER("disable_right_eye_render", Settings.SECTION_RENDERER, true),
     CUSTOM_TEXTURES("custom_textures", Settings.SECTION_UTILITY, false),
     DUMP_TEXTURES("dump_textures", Settings.SECTION_UTILITY, false),
     PRELOAD_TEXTURES("preload_textures", Settings.SECTION_RENDERER, false),

@@ -714,6 +714,7 @@ void Config::ReadRendererValues() {
     ReadGlobalSetting(Settings::values.texture_sampling);
 
     ReadGlobalSetting(Settings::values.delay_game_render_thread_us);
+    ReadGlobalSetting(Settings::values.disable_right_eye_render);
 
     if (global) {
         ReadBasicSetting(Settings::values.use_shader_jit);
@@ -1257,6 +1258,7 @@ void Config::SaveRendererValues() {
     WriteGlobalSetting(Settings::values.texture_sampling);
 
     WriteGlobalSetting(Settings::values.delay_game_render_thread_us);
+    WriteGlobalSetting(Settings::values.disable_right_eye_render);
 
     if (global) {
         WriteSetting(QStringLiteral("use_shader_jit"), Settings::values.use_shader_jit.GetValue(),

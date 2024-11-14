@@ -411,10 +411,10 @@ System::ResultStatus System::Load(Frontend::EmuWindow& emu_window, const std::st
         return ResultStatus::ErrorGetLoader;
     }
 
+    u64_le program_id = 0;
+    app_loader->ReadProgramId(program_id);
     if (restore_plugin_context.has_value() && restore_plugin_context->is_enabled &&
         restore_plugin_context->use_user_load_parameters) {
-        u64_le program_id = 0;
-        app_loader->ReadProgramId(program_id);
         if (restore_plugin_context->user_load_parameters.low_title_Id ==
                 static_cast<u32_le>(program_id) &&
             restore_plugin_context->user_load_parameters.plugin_memory_strategy ==
@@ -463,6 +463,7 @@ System::ResultStatus System::Load(Frontend::EmuWindow& emu_window, const std::st
         System::Shutdown();
         return init_result;
     }
+    gpu->ReportLoadingProgramID(program_id);
 
     // Restore any parameters that should be carried through a reset.
     if (restore_deliver_arg.has_value()) {
@@ -880,7 +881,7 @@ void System::serialize(Archive& ar, const unsigned int file_version) {
     if (Archive::is_saving::value) {
         num_cores = this->GetNumCores();
     }
-    ar & num_cores;
+    ar& num_cores;
 
     if (Archive::is_loading::value) {
         // When loading, we want to make sure any lingering state gets cleared out before we
@@ -916,7 +917,7 @@ void System::serialize(Archive& ar, const unsigned int file_version) {
     ar&* memory.get();
     ar&* kernel.get();
     ar&* gpu.get();
-    ar & movie;
+    ar& movie;
 
     // This needs to be set from somewhere - might as well be here!
     if (Archive::is_loading::value) {
