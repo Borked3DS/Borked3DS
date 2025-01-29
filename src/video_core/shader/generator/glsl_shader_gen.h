@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <string>
+
 // High precision may or may not be supported in GLES3. If it isn't, use medium precision instead.
 static constexpr char fragment_shader_precision_OES[] = R"(
 #if GL_ES

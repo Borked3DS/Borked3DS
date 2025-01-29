@@ -10,7 +10,7 @@
 #include "common/common_types.h"
 
 namespace Pica {
-struct OutputVertex;
+class OutputVertex;
 }
 
 namespace Pica {

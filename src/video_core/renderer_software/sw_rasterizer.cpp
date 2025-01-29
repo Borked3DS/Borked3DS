@@ -45,14 +45,31 @@ struct Vertex : Pica::OutputVertex {
      * Note: This function cannot be called after perspective divide.
      **/
     void Lerp(f24 factor, const Vertex& vtx) {
-        pos = pos * factor + vtx.pos * (f24::One() - factor);
-        quat = quat * factor + vtx.quat * (f24::One() - factor);
-        color = color * factor + vtx.color * (f24::One() - factor);
-        tc0 = tc0 * factor + vtx.tc0 * (f24::One() - factor);
-        tc1 = tc1 * factor + vtx.tc1 * (f24::One() - factor);
+        // Get vectors from the accessors
+        auto my_pos = pos();
+        auto other_pos = vtx.pos();
+        auto my_quat = quat();
+        auto other_quat = vtx.quat();
+        auto my_color = color();
+        auto other_color = vtx.color();
+        auto my_tc0 = tc0();
+        auto other_tc0 = vtx.tc0();
+        auto my_tc1 = tc1();
+        auto other_tc1 = vtx.tc1();
+        auto my_view = view();
+        auto other_view = vtx.view();
+        auto my_tc2 = tc2();
+        auto other_tc2 = vtx.tc2();
+
+        // Perform interpolation
+        set_pos(my_pos * factor + other_pos * (f24::One() - factor));
+        set_quat(my_quat * factor + other_quat * (f24::One() - factor));
+        set_color(my_color * factor + other_color * (f24::One() - factor));
+        set_tc0(my_tc0 * factor + other_tc0 * (f24::One() - factor));
+        set_tc1(my_tc1 * factor + other_tc1 * (f24::One() - factor));
         tc0_w = tc0_w * factor + vtx.tc0_w * (f24::One() - factor);
-        view = view * factor + vtx.view * (f24::One() - factor);
-        tc2 = tc2 * factor + vtx.tc2 * (f24::One() - factor);
+        set_view(my_view * factor + other_view * (f24::One() - factor));
+        set_tc2(my_tc2 * factor + other_tc2 * (f24::One() - factor));
     }
 
     /**
@@ -77,7 +94,8 @@ public:
         : pos(f24::Zero()), coeffs(coeffs), bias(bias) {}
 
     bool IsInside(const Vertex& vertex) const {
-        return Common::Dot(vertex.pos + bias, coeffs) >= f24::FromFloat32(-EPSILON_Z);
+        auto pos = vertex.pos();
+        return Common::Dot(pos + bias, coeffs) >= f24::FromFloat32(-EPSILON_Z);
     }
 
     bool IsOutSide(const Vertex& vertex) const {
@@ -85,8 +103,10 @@ public:
     }
 
     Vertex GetIntersection(const Vertex& v0, const Vertex& v1) const {
-        const f24 dp = Common::Dot(v0.pos + bias, coeffs);
-        const f24 dp_prev = Common::Dot(v1.pos + bias, coeffs);
+        auto pos0 = v0.pos();
+        auto pos1 = v1.pos();
+        const f24 dp = Common::Dot(pos0 + bias, coeffs);
+        const f24 dp_prev = Common::Dot(pos1 + bias, coeffs);
         const f24 factor = dp_prev / (dp_prev - dp);
         return Vertex::Lerp(factor, v0, v1);
     }
@@ -117,8 +137,8 @@ void RasterizerSoftware::AddTriangle(const Pica::OutputVertex& v0, const Pica::O
     boost::container::static_vector<Vertex, MAX_VERTICES> buffer_a = {v0, v1, v2};
     boost::container::static_vector<Vertex, MAX_VERTICES> buffer_b;
 
-    FlipQuaternionIfOpposite(buffer_a[1].quat, buffer_a[0].quat);
-    FlipQuaternionIfOpposite(buffer_a[2].quat, buffer_a[0].quat);
+    FlipQuaternionIfOpposite(buffer_a[1], buffer_a[0]);
+    FlipQuaternionIfOpposite(buffer_a[2], buffer_a[0]);
 
     auto* output_list = &buffer_a;
     auto* input_list = &buffer_b;
@@ -189,16 +209,17 @@ void RasterizerSoftware::AddTriangle(const Pica::OutputVertex& v0, const Pica::O
             "Triangle {}/{} at position ({:.3}, {:.3}, {:.3}, {:.3f}), "
             "({:.3}, {:.3}, {:.3}, {:.3}), ({:.3}, {:.3}, {:.3}, {:.3}) and "
             "screen position ({:.2}, {:.2}, {:.2}), ({:.2}, {:.2}, {:.2}), ({:.2}, {:.2}, {:.2})",
-            i + 1, output_list->size() - 2, vtx0.pos.x.ToFloat32(), vtx0.pos.y.ToFloat32(),
-            vtx0.pos.z.ToFloat32(), vtx0.pos.w.ToFloat32(), vtx1.pos.x.ToFloat32(),
-            vtx1.pos.y.ToFloat32(), vtx1.pos.z.ToFloat32(), vtx1.pos.w.ToFloat32(),
-            vtx2.pos.x.ToFloat32(), vtx2.pos.y.ToFloat32(), vtx2.pos.z.ToFloat32(),
-            vtx2.pos.w.ToFloat32(), vtx0.screenpos.x.ToFloat32(), vtx0.screenpos.y.ToFloat32(),
+            i + 1, output_list->size() - 2,
+            // Using vertex positions directly
+            vtx0.pos().x.ToFloat32(), vtx0.pos().y.ToFloat32(), vtx0.pos().z.ToFloat32(),
+            vtx0.pos().w.ToFloat32(), vtx1.pos().x.ToFloat32(), vtx1.pos().y.ToFloat32(),
+            vtx1.pos().z.ToFloat32(), vtx1.pos().w.ToFloat32(), vtx2.pos().x.ToFloat32(),
+            vtx2.pos().y.ToFloat32(), vtx2.pos().z.ToFloat32(), vtx2.pos().w.ToFloat32(),
+            vtx0.screenpos.x.ToFloat32(), vtx0.screenpos.y.ToFloat32(),
             vtx0.screenpos.z.ToFloat32(), vtx1.screenpos.x.ToFloat32(),
             vtx1.screenpos.y.ToFloat32(), vtx1.screenpos.z.ToFloat32(),
             vtx2.screenpos.x.ToFloat32(), vtx2.screenpos.y.ToFloat32(),
             vtx2.screenpos.z.ToFloat32());
-
         ProcessTriangle(vtx0, vtx1, vtx2);
     }
 }
@@ -210,19 +231,40 @@ void RasterizerSoftware::MakeScreenCoords(Vertex& vtx) {
     viewport.offset_x = f24::FromFloat32(static_cast<f32>(regs.rasterizer.viewport_corner.x));
     viewport.offset_y = f24::FromFloat32(static_cast<f32>(regs.rasterizer.viewport_corner.y));
 
-    f24 inv_w = f24::One() / vtx.pos.w;
-    vtx.pos.w = inv_w;
-    vtx.quat *= inv_w;
-    vtx.color *= inv_w;
-    vtx.tc0 *= inv_w;
-    vtx.tc1 *= inv_w;
-    vtx.tc0_w *= inv_w;
-    vtx.view *= inv_w;
-    vtx.tc2 *= inv_w;
+    f24 inv_w = f24::One() / vtx.pos().w;
 
-    vtx.screenpos[0] = (vtx.pos.x * inv_w + f24::One()) * viewport.halfsize_x + viewport.offset_x;
-    vtx.screenpos[1] = (vtx.pos.y * inv_w + f24::One()) * viewport.halfsize_y + viewport.offset_y;
-    vtx.screenpos[2] = vtx.pos.z * inv_w;
+    // Update all vectors using accessors
+    auto pos = vtx.pos();
+    auto quat = vtx.quat();
+    auto color = vtx.color();
+    auto tc0 = vtx.tc0();
+    auto tc1 = vtx.tc1();
+    auto view = vtx.view();
+    auto tc2 = vtx.tc2();
+
+    // Scale all vectors by inv_w
+    pos *= inv_w;
+    quat *= inv_w;
+    color *= inv_w;
+    tc0 *= inv_w;
+    tc1 *= inv_w;
+    vtx.tc0_w *= inv_w;
+    view *= inv_w;
+    tc2 *= inv_w;
+
+    // Store results back using setters
+    vtx.set_pos(pos);
+    vtx.set_quat(quat);
+    vtx.set_color(color);
+    vtx.set_tc0(tc0);
+    vtx.set_tc1(tc1);
+    vtx.set_view(view);
+    vtx.set_tc2(tc2);
+
+    // Calculate screen coordinates
+    vtx.screenpos[0] = (pos.x + f24::One()) * viewport.halfsize_x + viewport.offset_x;
+    vtx.screenpos[1] = (pos.y + f24::One()) * viewport.halfsize_y + viewport.offset_y;
+    vtx.screenpos[2] = pos.z;
 }
 
 void RasterizerSoftware::ProcessTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2,
@@ -291,7 +333,7 @@ void RasterizerSoftware::ProcessTriangle(const Vertex& v0, const Vertex& v1, con
     const int bias2 =
         IsRightSideOrFlatBottomEdge(vtxpos[2].xy(), vtxpos[0].xy(), vtxpos[1].xy()) ? 1 : 0;
 
-    const auto w_inverse = Common::MakeVec(v0.pos.w, v1.pos.w, v2.pos.w);
+    const auto w_inverse = Common::MakeVec(v0.pos().w, v1.pos().w, v2.pos().w);
 
     const auto textures = regs.texturing.GetTextures();
     const auto tev_stages = regs.texturing.GetTevStages();
@@ -370,42 +412,60 @@ void RasterizerSoftware::ProcessTriangle(const Vertex& v0, const Vertex& v1, con
                  * The generalization to three vertices is straightforward in baricentric
                  *coordinates.
                  **/
-                const auto get_interpolated_attribute = [&](f24 attr0, f24 attr1, f24 attr2) {
-                    auto attr_over_w = Common::MakeVec(attr0, attr1, attr2);
+
+                auto get_interpolated_attribute = [&](const f24& v0_attr, const f24& v1_attr,
+                                                      const f24& v2_attr) {
+                    auto attr_over_w = Common::MakeVec(v0_attr, v1_attr, v2_attr);
                     f24 interpolated_attr_over_w =
                         Common::Dot(attr_over_w, baricentric_coordinates);
                     return interpolated_attr_over_w * interpolated_w_inverse;
                 };
 
+                // Color interpolation
+                const auto v0_color = v0.color();
+                const auto v1_color = v1.color();
+                const auto v2_color = v2.color();
+
                 const Common::Vec4<u8> primary_color{
-                    static_cast<u8>(
-                        round(get_interpolated_attribute(v0.color.r(), v1.color.r(), v2.color.r())
-                                  .ToFloat32() *
-                              255)),
-                    static_cast<u8>(
-                        round(get_interpolated_attribute(v0.color.g(), v1.color.g(), v2.color.g())
-                                  .ToFloat32() *
-                              255)),
-                    static_cast<u8>(
-                        round(get_interpolated_attribute(v0.color.b(), v1.color.b(), v2.color.b())
-                                  .ToFloat32() *
-                              255)),
-                    static_cast<u8>(
-                        round(get_interpolated_attribute(v0.color.a(), v1.color.a(), v2.color.a())
-                                  .ToFloat32() *
-                              255)),
+                    static_cast<u8>(round(
+                        get_interpolated_attribute(v0_color.x, v1_color.x, v2_color.x).ToFloat32() *
+                        255)),
+                    static_cast<u8>(round(
+                        get_interpolated_attribute(v0_color.y, v1_color.y, v2_color.y).ToFloat32() *
+                        255)),
+                    static_cast<u8>(round(
+                        get_interpolated_attribute(v0_color.z, v1_color.z, v2_color.z).ToFloat32() *
+                        255)),
+                    static_cast<u8>(round(
+                        get_interpolated_attribute(v0_color.w, v1_color.w, v2_color.w).ToFloat32() *
+                        255)),
                 };
 
+                // Texture coordinate interpolation
+                auto tc0_v0 = v0.tc0();
+                auto tc0_v1 = v1.tc0();
+                auto tc0_v2 = v2.tc0();
+                auto tc1_v0 = v0.tc1();
+                auto tc1_v1 = v1.tc1();
+                auto tc1_v2 = v2.tc1();
+                auto tc2_v0 = v0.tc2();
+                auto tc2_v1 = v1.tc2();
+                auto tc2_v2 = v2.tc2();
+
                 std::array<Common::Vec2<f24>, 3> uv;
-                uv[0].u() = get_interpolated_attribute(v0.tc0.u(), v1.tc0.u(), v2.tc0.u());
-                uv[0].v() = get_interpolated_attribute(v0.tc0.v(), v1.tc0.v(), v2.tc0.v());
-                uv[1].u() = get_interpolated_attribute(v0.tc1.u(), v1.tc1.u(), v2.tc1.u());
-                uv[1].v() = get_interpolated_attribute(v0.tc1.v(), v1.tc1.v(), v2.tc1.v());
-                uv[2].u() = get_interpolated_attribute(v0.tc2.u(), v1.tc2.u(), v2.tc2.u());
-                uv[2].v() = get_interpolated_attribute(v0.tc2.v(), v1.tc2.v(), v2.tc2.v());
+                // TC0 coordinates
+                uv[0].x = get_interpolated_attribute(tc0_v0.x, tc0_v1.x, tc0_v2.x);
+                uv[0].y = get_interpolated_attribute(tc0_v0.y, tc0_v1.y, tc0_v2.y);
+                // TC1 coordinates
+                uv[1].x = get_interpolated_attribute(tc1_v0.x, tc1_v1.x, tc1_v2.x);
+                uv[1].y = get_interpolated_attribute(tc1_v0.y, tc1_v1.y, tc1_v2.y);
+                // TC2 coordinates
+                uv[2].x = get_interpolated_attribute(tc2_v0.x, tc2_v1.x, tc2_v2.x);
+                uv[2].y = get_interpolated_attribute(tc2_v0.y, tc2_v1.y, tc2_v2.y);
 
                 // Sample bound texture units.
                 const f24 tc0_w = get_interpolated_attribute(v0.tc0_w, v1.tc0_w, v2.tc0_w);
+
                 const auto texture_color = TextureColor(uv, textures, tc0_w);
 
                 Common::Vec4<u8> primary_fragment_color = {0, 0, 0, 0};
@@ -414,21 +474,27 @@ void RasterizerSoftware::ProcessTriangle(const Vertex& v0, const Vertex& v1, con
                 if (!regs.lighting.disable) {
                     const auto normquat =
                         Common::Quaternion<f32>{
-                            {get_interpolated_attribute(v0.quat.x, v1.quat.x, v2.quat.x)
+                            {get_interpolated_attribute(v0.quat().x, v1.quat().x, v2.quat().x)
                                  .ToFloat32(),
-                             get_interpolated_attribute(v0.quat.y, v1.quat.y, v2.quat.y)
+                             get_interpolated_attribute(v0.quat().y, v1.quat().y, v2.quat().y)
                                  .ToFloat32(),
-                             get_interpolated_attribute(v0.quat.z, v1.quat.z, v2.quat.z)
+                             get_interpolated_attribute(v0.quat().z, v1.quat().z, v2.quat().z)
                                  .ToFloat32()},
-                            get_interpolated_attribute(v0.quat.w, v1.quat.w, v2.quat.w).ToFloat32(),
+                            get_interpolated_attribute(v0.quat().w, v1.quat().w, v2.quat().w)
+                                .ToFloat32(),
                         }
                             .Normalized();
 
+                    auto view0 = v0.view();
+                    auto view1 = v1.view();
+                    auto view2 = v2.view();
+
                     const Common::Vec3f view{
-                        get_interpolated_attribute(v0.view.x, v1.view.x, v2.view.x).ToFloat32(),
-                        get_interpolated_attribute(v0.view.y, v1.view.y, v2.view.y).ToFloat32(),
-                        get_interpolated_attribute(v0.view.z, v1.view.z, v2.view.z).ToFloat32(),
+                        get_interpolated_attribute(view0.x, view1.x, view2.x).ToFloat32(),
+                        get_interpolated_attribute(view0.y, view1.y, view2.y).ToFloat32(),
+                        get_interpolated_attribute(view0.z, view1.z, view2.z).ToFloat32(),
                     };
+
                     std::tie(primary_fragment_color, secondary_fragment_color) =
                         ComputeFragmentsColors(regs.lighting, pica.lighting, normquat, view,
                                                texture_color);
@@ -451,7 +517,7 @@ void RasterizerSoftware::ProcessTriangle(const Vertex& v0, const Vertex& v1, con
                 }
 
                 // Does alpha testing happen before or after stencil?
-                if (!DoAlphaTest(combiner_output.a())) {
+                if (!DoAlphaTest(combiner_output.w)) { // Changed from a()
                     continue;
                 }
                 WriteFog(depth, combiner_output);
@@ -484,10 +550,9 @@ std::array<Common::Vec4<u8>, 4> RasterizerSoftware::TextureColor(
         }
 
         const s32 coordinate_i = (i == 2 && regs.texturing.main_config.texture2_use_coord1) ? 1 : i;
-        f24 u = uv[coordinate_i].u();
-        f24 v = uv[coordinate_i].v();
+        f24 u = uv[coordinate_i].x; // Changed from u()
+        f24 v = uv[coordinate_i].y; // Changed from v()
 
-        // Only unit 0 respects the texturing type (according to 3DBrew)
         PAddr texture_address = texture.config.GetPhysicalAddress();
         f24 shadow_z;
         if (i == 0) {
@@ -514,7 +579,7 @@ std::array<Common::Vec4<u8>, 4> RasterizerSoftware::TextureColor(
                 break;
             }
             case TexturingRegs::TextureConfig::Disabled:
-                continue; // skip this unit and continue to the next unit
+                continue;
             default:
                 LOG_ERROR(HW_GPU, "Unhandled texture type {:x}", (int)texture.config.type);
                 UNIMPLEMENTED();
@@ -548,9 +613,6 @@ std::array<Common::Vec4<u8>, 4> RasterizerSoftware::TextureColor(
                                                border_color.b.Value(), border_color.a.Value())
                                    .Cast<u8>();
         } else {
-            // Textures are laid out from bottom to top, hence we invert the t coordinate.
-            // NOTE: This may not be the right place for the inversion.
-            // TODO: Check if this applies to ETC textures, too.
             s = GetWrappedTexCoord(texture.config.wrap_s, s, texture.config.width);
             t = texture.config.height - 1 -
                 GetWrappedTexCoord(texture.config.wrap_t, t, texture.config.height);
@@ -558,31 +620,23 @@ std::array<Common::Vec4<u8>, 4> RasterizerSoftware::TextureColor(
             const u8* texture_data = memory.GetPhysicalPointer(texture_address);
             const auto info = TextureInfo::FromPicaRegister(texture.config, texture.format);
 
-            // TODO: Apply the min and mag filters to the texture
             texture_color[i] = LookupTexture(texture_data, s, t, info);
         }
 
         if (i == 0 && (texture.config.type == TexturingRegs::TextureConfig::Shadow2D ||
                        texture.config.type == TexturingRegs::TextureConfig::ShadowCube)) {
-
             s32 z_int = static_cast<s32>(std::min(shadow_z.ToFloat32(), 1.0f) * 0xFFFFFF);
             z_int -= regs.texturing.shadow.bias << 1;
             const auto& color = texture_color[i];
             const s32 z_ref = (color.w << 16) | (color.z << 8) | color.y;
-            u8 density;
-            if (z_ref >= z_int) {
-                density = color.x;
-            } else {
-                density = 0;
-            }
+            u8 density = (z_ref >= z_int) ? color.x : 0;
             texture_color[i] = {density, density, density, density};
         }
     }
 
-    // Sample procedural texture
     if (regs.texturing.main_config.texture3_enable) {
         const auto& proctex_uv = uv[regs.texturing.main_config.texture3_coordinates];
-        texture_color[3] = ProcTex(proctex_uv.u().ToFloat32(), proctex_uv.v().ToFloat32(),
+        texture_color[3] = ProcTex(proctex_uv.x.ToFloat32(), proctex_uv.y.ToFloat32(),
                                    regs.texturing, pica.proctex);
     }
 
@@ -620,27 +674,27 @@ Common::Vec4<u8> RasterizerSoftware::PixelColor(u16 x, u16 y,
             case FramebufferRegs::BlendFactor::OneMinusDestColor:
                 return 255 - dest[channel];
             case FramebufferRegs::BlendFactor::SourceAlpha:
-                return combiner_output.a();
+                return combiner_output.w; // Changed from a()
             case FramebufferRegs::BlendFactor::OneMinusSourceAlpha:
-                return 255 - combiner_output.a();
+                return 255 - combiner_output.w; // Changed from a()
             case FramebufferRegs::BlendFactor::DestAlpha:
-                return dest.a();
+                return dest.w; // Changed from a()
             case FramebufferRegs::BlendFactor::OneMinusDestAlpha:
-                return 255 - dest.a();
+                return 255 - dest.w; // Changed from a()
             case FramebufferRegs::BlendFactor::ConstantColor:
                 return blend_const[channel];
             case FramebufferRegs::BlendFactor::OneMinusConstantColor:
                 return 255 - blend_const[channel];
             case FramebufferRegs::BlendFactor::ConstantAlpha:
-                return blend_const.a();
+                return blend_const.w; // Changed from a()
             case FramebufferRegs::BlendFactor::OneMinusConstantAlpha:
-                return 255 - blend_const.a();
+                return 255 - blend_const.w; // Changed from a()
             case FramebufferRegs::BlendFactor::SourceAlphaSaturate:
-                // Returns 1.0 for the alpha channel
                 if (channel == 3) {
                     return 255;
                 }
-                return std::min(combiner_output.a(), static_cast<u8>(255 - dest.a()));
+                return std::min(combiner_output.w,
+                                static_cast<u8>(255 - dest.w)); // Changed from a()
             default:
                 LOG_CRITICAL(HW_GPU, "Unknown blend factor {:x}", factor);
                 UNIMPLEMENTED();
@@ -659,22 +713,23 @@ Common::Vec4<u8> RasterizerSoftware::PixelColor(u16 x, u16 y,
 
         blend_output = EvaluateBlendEquation(combiner_output, srcfactor, dest, dstfactor,
                                              params.blend_equation_rgb);
-        blend_output.a() = EvaluateBlendEquation(combiner_output, srcfactor, dest, dstfactor,
-                                                 params.blend_equation_a)
-                               .a();
+        blend_output.w =
+            EvaluateBlendEquation(combiner_output, srcfactor, dest, dstfactor, // Changed from a()
+                                  params.blend_equation_a)
+                .w; // Changed from a()
     } else {
-        blend_output =
-            Common::MakeVec(LogicOp(combiner_output.r(), dest.r(), output_merger.logic_op),
-                            LogicOp(combiner_output.g(), dest.g(), output_merger.logic_op),
-                            LogicOp(combiner_output.b(), dest.b(), output_merger.logic_op),
-                            LogicOp(combiner_output.a(), dest.a(), output_merger.logic_op));
+        blend_output = Common::MakeVec(
+            LogicOp(combiner_output.x, dest.x, output_merger.logic_op),  // Changed from r()
+            LogicOp(combiner_output.y, dest.y, output_merger.logic_op),  // Changed from g()
+            LogicOp(combiner_output.z, dest.z, output_merger.logic_op),  // Changed from b()
+            LogicOp(combiner_output.w, dest.w, output_merger.logic_op)); // Changed from a()
     }
 
     const Common::Vec4<u8> result = {
-        output_merger.red_enable ? blend_output.r() : dest.r(),
-        output_merger.green_enable ? blend_output.g() : dest.g(),
-        output_merger.blue_enable ? blend_output.b() : dest.b(),
-        output_merger.alpha_enable ? blend_output.a() : dest.a(),
+        output_merger.red_enable ? blend_output.x : dest.x,   // Changed from r()
+        output_merger.green_enable ? blend_output.y : dest.y, // Changed from g()
+        output_merger.blue_enable ? blend_output.z : dest.z,  // Changed from b()
+        output_merger.alpha_enable ? blend_output.w : dest.w, // Changed from a()
     };
 
     return result;
@@ -771,34 +826,33 @@ Common::Vec4<u8> RasterizerSoftware::WriteTevConfig(
             alpha_output = AlphaCombine(tev_stage.alpha_op, alpha_result);
         }
 
-        combiner_output[0] = std::min(255U, color_output.r() * tev_stage.GetColorMultiplier());
-        combiner_output[1] = std::min(255U, color_output.g() * tev_stage.GetColorMultiplier());
-        combiner_output[2] = std::min(255U, color_output.b() * tev_stage.GetColorMultiplier());
+        combiner_output[0] =
+            std::min(255U, color_output.x * tev_stage.GetColorMultiplier()); // Changed from r()
+        combiner_output[1] =
+            std::min(255U, color_output.y * tev_stage.GetColorMultiplier()); // Changed from g()
+        combiner_output[2] =
+            std::min(255U, color_output.z * tev_stage.GetColorMultiplier()); // Changed from b()
         combiner_output[3] = std::min(255U, alpha_output * tev_stage.GetAlphaMultiplier());
 
         combiner_buffer = next_combiner_buffer;
 
         if (regs.texturing.tev_combiner_buffer_input.TevStageUpdatesCombinerBufferColor(
                 tev_stage_index)) {
-            next_combiner_buffer.r() = combiner_output.r();
-            next_combiner_buffer.g() = combiner_output.g();
-            next_combiner_buffer.b() = combiner_output.b();
+            next_combiner_buffer.x = combiner_output.x; // Changed from r()
+            next_combiner_buffer.y = combiner_output.y; // Changed from g()
+            next_combiner_buffer.z = combiner_output.z; // Changed from b()
         }
 
         if (regs.texturing.tev_combiner_buffer_input.TevStageUpdatesCombinerBufferAlpha(
                 tev_stage_index)) {
-            next_combiner_buffer.a() = combiner_output.a();
+            next_combiner_buffer.w = combiner_output.w; // Changed from a()
         }
-    }
+    } // End of for loop
 
     return combiner_output;
 }
 
 void RasterizerSoftware::WriteFog(float depth, Common::Vec4<u8>& combiner_output) const {
-    /**
-     * Apply fog combiner. Not fully accurate. We'd have to know what data type is used to
-     * store the depth etc. Using float for now until we know more about Pica datatypes.
-     **/
     if (regs.texturing.fog_mode == TexturingRegs::FogMode::Fog) {
         const Common::Vec3<u8> fog_color =
             Common::MakeVec(regs.texturing.fog_color.r.Value(), regs.texturing.fog_color.g.Value(),
@@ -818,10 +872,14 @@ void RasterizerSoftware::WriteFog(float depth, Common::Vec4<u8>& combiner_output
         const auto& fog_lut_entry = pica.fog.lut[static_cast<u32>(fog_i)];
         f32 fog_factor = fog_lut_entry.ToFloat() + fog_lut_entry.DiffToFloat() * fog_f;
         fog_factor = std::clamp(fog_factor, 0.0f, 1.0f);
-        for (u32 i = 0; i < 3; i++) {
-            combiner_output[i] = static_cast<u8>(fog_factor * combiner_output[i] +
-                                                 (1.0f - fog_factor) * fog_color[i]);
-        }
+
+        // Instead of using array indexing, use direct component access
+        combiner_output.r() =
+            static_cast<u8>(fog_factor * combiner_output.r() + (1.0f - fog_factor) * fog_color.r());
+        combiner_output.g() =
+            static_cast<u8>(fog_factor * combiner_output.g() + (1.0f - fog_factor) * fog_color.g());
+        combiner_output.b() =
+            static_cast<u8>(fog_factor * combiner_output.b() + (1.0f - fog_factor) * fog_color.b());
     }
 }
 

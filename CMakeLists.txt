@@ -57,12 +57,38 @@ endif()
 # Set position independent code
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Enable O2 compiler optimizations
-if (MSVC)
-    add_compile_options(/O2)
-else()
-    add_compile_options(-O2)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    # Base options
+    set(SIMD_FLAGS "-O3")
+
+    # Architecture specific flags
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)")
+        # ARM64 NEON support
+        set(SIMD_FLAGS "${SIMD_FLAGS} -march=armv8-a+simd")
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64)")
+        # x86_64 SSE/AVX support
+        set(SIMD_FLAGS "${SIMD_FLAGS} -msse4.1") # Ensures SSE4.1 support
+    endif()
+
+    # Enable vectorization
+    set(SIMD_FLAGS "${SIMD_FLAGS} -ftree-vectorize")
+elseif(MSVC)
+    # Base options
+    set(SIMD_FLAGS "/O2")
+
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)")
+        # ARM64 NEON support
+        set(SIMD_FLAGS "${SIMD_FLAGS} /arch:arm64")
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64)")
+        # x86_64 SSE/AVX support
+        set(SIMD_FLAGS "${SIMD_FLAGS} /arch:AVX") # This includes SSE4.1
+    endif()
+
+    # Enable vectorization
+    set(SIMD_FLAGS "${SIMD_FLAGS} /Qvec")
 endif()
+
+add_compile_options("${SIMD_FLAGS}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/externals/cmake-modules")

@@ -3,6 +3,7 @@
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
+#include <sstream>
 #include <string_view>
 #include <fmt/format.h>
 
@@ -384,34 +385,37 @@ void EmitPrim(Vertex vtx0, Vertex vtx1, Vertex vtx2) {
 };
 
 std::string GenerateFixedGeometryShader(const PicaFixedGSConfig& config, bool separable_shader) {
-    std::string out;
+    std::stringstream out;
+
     if (separable_shader) {
-        out += "#extension GL_ARB_separate_shader_objects : enable\n";
+        out << "#extension GL_ARB_separate_shader_objects : enable\n";
     }
 
-    out += R"(
+    out << R"(
 layout(triangles) in;
 layout(triangle_strip, max_vertices = 3) out;
 
 )";
 
-    out += GetGSCommonSource(config.state, separable_shader);
+    out << GetGSCommonSource(config.state, separable_shader);
 
-    out += R"(
+    out << R"(
 void main() {
     Vertex prim_buffer[3];
 )";
+
     for (u32 vtx = 0; vtx < 3; ++vtx) {
-        out += fmt::format("    prim_buffer[{}].attributes = vec4[{}](", vtx,
+        out << fmt::format("    prim_buffer[{}].attributes = vec4[{}](", vtx,
                            config.state.gs_output_attributes);
         for (u32 i = 0; i < config.state.vs_output_attributes; ++i) {
-            out += fmt::format("{}vs_out_attr{}[{}]", i == 0 ? "" : ", ", i, vtx);
+            out << fmt::format("{}vs_out_attr{}[{}]", i == 0 ? "" : ", ", i, vtx);
         }
-        out += ");\n";
+        out << ");\n";
     }
-    out += "    EmitPrim(prim_buffer[0], prim_buffer[1], prim_buffer[2]);\n";
-    out += "}\n";
 
-    return out;
+    out << "    EmitPrim(prim_buffer[0], prim_buffer[1], prim_buffer[2]);\n";
+    out << "}\n";
+
+    return out.str();
 }
 } // namespace Pica::Shader::Generator::GLSL

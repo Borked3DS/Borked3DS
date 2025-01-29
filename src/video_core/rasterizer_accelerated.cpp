@@ -24,28 +24,33 @@ static Common::Vec3f LightColor(const Pica::LightingRegs::LightColor& color) {
 
 RasterizerAccelerated::HardwareVertex::HardwareVertex(const Pica::OutputVertex& v,
                                                       bool flip_quaternion) {
-    position[0] = v.pos.x.ToFloat32();
-    position[1] = v.pos.y.ToFloat32();
-    position[2] = v.pos.z.ToFloat32();
-    position[3] = v.pos.w.ToFloat32();
-    color[0] = v.color.x.ToFloat32();
-    color[1] = v.color.y.ToFloat32();
-    color[2] = v.color.z.ToFloat32();
-    color[3] = v.color.w.ToFloat32();
-    tex_coord0[0] = v.tc0.x.ToFloat32();
-    tex_coord0[1] = v.tc0.y.ToFloat32();
-    tex_coord1[0] = v.tc1.x.ToFloat32();
-    tex_coord1[1] = v.tc1.y.ToFloat32();
-    tex_coord2[0] = v.tc2.x.ToFloat32();
-    tex_coord2[1] = v.tc2.y.ToFloat32();
+    // Get the vector components first
+    auto pos = v.pos();
+    auto col = v.color();
+    auto tc0 = v.tc0();
+    auto tc1 = v.tc1();
+    auto tc2 = v.tc2();
+    auto q = v.quat();
+    auto view_vec = v.view();
+
+    // Now assign to the float arrays
+    position =
+        Common::Vec4f{pos.x.ToFloat32(), pos.y.ToFloat32(), pos.z.ToFloat32(), pos.w.ToFloat32()};
+
+    color =
+        Common::Vec4f{col.x.ToFloat32(), col.y.ToFloat32(), col.z.ToFloat32(), col.w.ToFloat32()};
+
+    tex_coord0 = Common::Vec2f{tc0.x.ToFloat32(), tc0.y.ToFloat32()};
+
+    tex_coord1 = Common::Vec2f{tc1.x.ToFloat32(), tc1.y.ToFloat32()};
+
+    tex_coord2 = Common::Vec2f{tc2.x.ToFloat32(), tc2.y.ToFloat32()};
+
     tex_coord0_w = v.tc0_w.ToFloat32();
-    normquat[0] = v.quat.x.ToFloat32();
-    normquat[1] = v.quat.y.ToFloat32();
-    normquat[2] = v.quat.z.ToFloat32();
-    normquat[3] = v.quat.w.ToFloat32();
-    view[0] = v.view.x.ToFloat32();
-    view[1] = v.view.y.ToFloat32();
-    view[2] = v.view.z.ToFloat32();
+
+    normquat = Common::Vec4f{q.x.ToFloat32(), q.y.ToFloat32(), q.z.ToFloat32(), q.w.ToFloat32()};
+
+    view = Common::Vec3f{view_vec.x.ToFloat32(), view_vec.y.ToFloat32(), view_vec.z.ToFloat32()};
 
     if (flip_quaternion) {
         normquat = -normquat;
@@ -75,9 +80,12 @@ RasterizerAccelerated::RasterizerAccelerated(Memory::MemorySystem& memory_, Pica
  * Fortunately however, the 3DS hardware happens to also use this exact same logic to work around
  * these issues, making this basic implementation actually more accurate to the hardware.
  */
-static bool AreQuaternionsOpposite(Common::Vec4<f24> qa, Common::Vec4<f24> qb) {
-    Common::Vec4f a{qa.x.ToFloat32(), qa.y.ToFloat32(), qa.z.ToFloat32(), qa.w.ToFloat32()};
-    Common::Vec4f b{qb.x.ToFloat32(), qb.y.ToFloat32(), qb.z.ToFloat32(), qb.w.ToFloat32()};
+static bool AreQuaternionsOpposite(const Pica::OutputVertex& v1, const Pica::OutputVertex& v2) {
+    auto q1 = v1.quat();
+    auto q2 = v2.quat();
+
+    Common::Vec4f a{q1.x.ToFloat32(), q1.y.ToFloat32(), q1.z.ToFloat32(), q1.w.ToFloat32()};
+    Common::Vec4f b{q2.x.ToFloat32(), q2.y.ToFloat32(), q2.z.ToFloat32(), q2.w.ToFloat32()};
 
     return (Common::Dot(a, b) < 0.f);
 }
@@ -85,8 +93,8 @@ static bool AreQuaternionsOpposite(Common::Vec4<f24> qa, Common::Vec4<f24> qb) {
 void RasterizerAccelerated::AddTriangle(const Pica::OutputVertex& v0, const Pica::OutputVertex& v1,
                                         const Pica::OutputVertex& v2) {
     vertex_batch.emplace_back(v0, false);
-    vertex_batch.emplace_back(v1, AreQuaternionsOpposite(v0.quat, v1.quat));
-    vertex_batch.emplace_back(v2, AreQuaternionsOpposite(v0.quat, v2.quat));
+    vertex_batch.emplace_back(v1, AreQuaternionsOpposite(v0, v1));
+    vertex_batch.emplace_back(v2, AreQuaternionsOpposite(v0, v2));
 }
 
 RasterizerAccelerated::VertexArrayInfo RasterizerAccelerated::AnalyzeVertexArray(

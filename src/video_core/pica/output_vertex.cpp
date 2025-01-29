@@ -28,21 +28,23 @@ OutputVertex::OutputVertex(const RasterizerRegs& regs, const AttributeBuffer& ou
 
     // The hardware takes the absolute and saturates vertex colors, *before* doing interpolation
     for (u32 i = 0; i < 4; ++i) {
-        const f32 c = std::fabs(color[i].ToFloat32());
-        color[i] = f24::FromFloat32(c < 1.0f ? c : 1.0f);
+        const f32 c = std::fabs(color_raw[i].ToFloat32());
+        color_raw[i] = f24::FromFloat32(c < 1.0f ? c : 1.0f);
     }
 }
 
 #define ASSERT_POS(var, pos)                                                                       \
-    static_assert(offsetof(OutputVertex, var) == pos * sizeof(f24), "Semantic at wrong "           \
-                                                                    "offset.")
+    static_assert(offsetof(OutputVertex, var##_raw) == pos * sizeof(f24), "Semantic at wrong "     \
+                                                                          "offset.")
 
 ASSERT_POS(pos, RasterizerRegs::VSOutputAttributes::POSITION_X);
 ASSERT_POS(quat, RasterizerRegs::VSOutputAttributes::QUATERNION_X);
 ASSERT_POS(color, RasterizerRegs::VSOutputAttributes::COLOR_R);
 ASSERT_POS(tc0, RasterizerRegs::VSOutputAttributes::TEXCOORD0_U);
 ASSERT_POS(tc1, RasterizerRegs::VSOutputAttributes::TEXCOORD1_U);
-ASSERT_POS(tc0_w, RasterizerRegs::VSOutputAttributes::TEXCOORD0_W);
+static_assert(offsetof(OutputVertex, tc0_w) ==
+                  RasterizerRegs::VSOutputAttributes::TEXCOORD0_W * sizeof(f24),
+              "Semantic at wrong offset.");
 ASSERT_POS(view, RasterizerRegs::VSOutputAttributes::VIEW_X);
 ASSERT_POS(tc2, RasterizerRegs::VSOutputAttributes::TEXCOORD2_U);
 
