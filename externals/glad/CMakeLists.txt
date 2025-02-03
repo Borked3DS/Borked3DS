@@ -1,7 +1,7 @@
 add_library(glad STATIC
-    src/glad.c
+    src/gl.c
     include/KHR/khrplatform.h
-    include/glad/glad.h
+    include/glad/gl.h
 )
 
 create_target_directory_groups(glad)

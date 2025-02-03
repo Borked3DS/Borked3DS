@@ -6,7 +6,7 @@
 #include <array>
 #include <string>
 #include <vector>
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include "common/assert.h"
 #include "common/logging/log.h"
 #include "video_core/renderer_opengl/gl_shader_util.h"

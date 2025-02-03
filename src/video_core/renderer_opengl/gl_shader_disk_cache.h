@@ -8,7 +8,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 #include "common/common_types.h"
 #include "common/file_util.h"

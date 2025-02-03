@@ -6,7 +6,7 @@
 #pragma once
 
 #include <array>
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 namespace OpenGL {
 

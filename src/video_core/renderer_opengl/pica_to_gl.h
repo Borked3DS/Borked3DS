@@ -6,7 +6,7 @@
 #pragma once
 
 #include <array>
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include "common/assert.h"
 #include "common/logging/log.h"
 #include "core/core.h"
