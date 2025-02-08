@@ -166,14 +166,38 @@ option(ENABLE_VULKAN "Enables the Vulkan renderer" ON)
 option(BORKED3DS_USE_EXTERNAL_VULKAN_SPIRV_TOOLS "Use SPIRV-Tools from externals" ON)
 
 option(ENABLE_PROFILING "Enables integration with the Tracy profiler" ON)
-option(USE_DISCORD_PRESENCE "Enables Discord Rich Presence" OFF)
-
+CMAKE_DEPENDENT_OPTION(USE_DISCORD_PRESENCE "Enables Discord Rich Presence" ON "NOT ANDROID AND NOT IOS" OFF)
 
 # Compile options
 CMAKE_DEPENDENT_OPTION(COMPILE_WITH_DWARF "Add DWARF debugging information" ${IS_DEBUG_BUILD} "MINGW" OFF)
 option(ENABLE_LTO "Enable link time optimization" ${DEFAULT_ENABLE_LTO})
 option(BORKED3DS_USE_PRECOMPILED_HEADERS "Use precompiled headers" ON)
 option(BORKED3DS_WARNINGS_AS_ERRORS "Enable warnings as errors" ON)
+
+# Dependency options - Prefer bundled versions over system packages
+option(USE_SYSTEM_BOOST "Use system installed Boost libraries" OFF)
+option(USE_SYSTEM_CATCH2 "Use system installed Catch2" OFF)
+option(USE_SYSTEM_CRYPTOPP "Use system installed Crypto++ libraries" OFF)
+option(USE_SYSTEM_FMT "Use system installed fmt libraries" OFF)
+option(USE_SYSTEM_XBYAK "Use system installed xbyak assembler" OFF)
+option(USE_SYSTEM_DYNARMIC "Use system installed dynarmic" OFF)
+option(USE_SYSTEM_INIH "Use system installed inih parser" OFF)
+option(USE_SYSTEM_FFMPEG_HEADERS "Use system installed ffmpeg headers" OFF)
+option(USE_SYSTEM_SOUNDTOUCH "Use system installed soundtouch" OFF)
+option(USE_SYSTEM_SDL2	 "Use system installed SDL2 library" OFF)
+option(USE_SYSTEM_LIBUSB "Use system installed libusb library" OFF)
+option(USE_SYSTEM_ZSTD "Use system installed zstd libraries" OFF)
+option(USE_SYSTEM_ENET "Use system installed ENet UDP library" OFF)
+option(USE_SYSTEM_CUBEB "Use system installed cubeb audio library" OFF)
+option(USE_SYSTEM_JSON "Use system installed nlohmann json library" OFF)
+option(USE_SYSTEM_OPENSSL "Use system installed LibreSSL library" OFF)
+option(USE_SYSTEM_CPP_HTTPLIB "Use system installed cpp-http library" OFF)
+option(USE_SYSTEM_CPP_JWT "Use system installed cpp-jwt library" OFF)
+option(USE_SYSTEM_LODEPNG "Use system installed lodepng" OFF)
+option(USE_SYSTEM_OPENAL "Use system installed openal-soft audio api" OFF)
+option(USE_SYSTEM_GLSLANG "Use system installed glslang" OFF)
+option(USE_SYSTEM_VULKAN_HEADERS "Use system installed vulkan-headers" OFF)
+option(USE_SYSTEM_VMA "Use system installed Vulkan Memory Allocation library" OFF)
 
 include(Borked3DSHandleSystemLibs)
 
