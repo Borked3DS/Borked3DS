@@ -70,10 +70,13 @@ endif()
 
 if(ANDROID)
     target_sources(audio_core PRIVATE
+        oboe_input.cpp
+        oboe_input.h
         oboe_sink.cpp
         oboe_sink.h
     )
     target_link_libraries(audio_core PRIVATE oboe)
+    target_compile_definitions(audio_core PUBLIC HAVE_OBOE)
 endif()
 
 if (BORKED3DS_USE_PRECOMPILED_HEADERS)

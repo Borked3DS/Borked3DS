@@ -16,6 +16,9 @@
 #ifdef HAVE_OPENAL
 #include "audio_core/openal_input.h"
 #endif
+#ifdef HAVE_OBOE
+#include "audio_core/oboe_input.h"
+#endif
 #include "common/logging/log.h"
 #include "core/core.h"
 
@@ -46,6 +49,18 @@ constexpr std::array input_details = {
                      return std::make_unique<OpenALInput>(std::string(device_id));
                  },
                  &ListOpenALInputDevices},
+#endif
+#ifdef HAVE_OBOE
+    InputDetails{InputType::Oboe, "Real Device (Oboe)", true,
+                 [](Core::System& system, std::string_view device_id) -> std::unique_ptr<Input> {
+                     if (!system.HasMicPermission()) {
+                         LOG_WARNING(Audio,
+                                     "Microphone permission denied, falling back to null input.");
+                         return std::make_unique<NullInput>();
+                     }
+                     return std::make_unique<OboeInput>(std::string(device_id));
+                 },
+                 &ListOboeInputDevices},
 #endif
     InputDetails{InputType::Static, "Static Noise", false,
                  [](Core::System& system, std::string_view device_id) -> std::unique_ptr<Input> {
