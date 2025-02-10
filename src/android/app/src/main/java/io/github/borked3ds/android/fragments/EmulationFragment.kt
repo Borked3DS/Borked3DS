@@ -436,6 +436,7 @@ class EmulationFragment : Fragment(), SurfaceHolder.Callback, Choreographer.Fram
             }
         )
 
+        GameIconUtils.loadGameIcon(requireActivity(), game, binding.loadingImage)
         binding.loadingTitle.text = game.title
 
         viewLifecycleOwner.lifecycleScope.apply {
