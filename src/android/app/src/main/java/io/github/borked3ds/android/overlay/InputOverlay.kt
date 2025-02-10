@@ -84,19 +84,18 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
         EmulationMenuSettings.swapScreens = isEnabled
 
         val rotation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            context.display?.rotation ?: 0
+            context.display!!.rotation
         } else {
             @Suppress("DEPRECATION")
-            (context as? Activity)?.windowManager?.defaultDisplay?.rotation ?: 0
+            (context as Activity).windowManager.defaultDisplay.rotation
         }
 
         NativeLibrary.swapScreens(isEnabled, rotation)
     }
 
     fun hapticFeedback(type: Int) {
-        if (EmulationMenuSettings.hapticFeedback) {
+        if (EmulationMenuSettings.hapticFeedback)
             performHapticFeedback(type)
-        }
     }
 
     override fun onTouch(v: View, event: MotionEvent): Boolean {
@@ -225,26 +224,23 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                         it.bounds.contains(fingerPositionX, fingerPositionY)
                     ) {
                         buttonBeingConfigured = it
-                        buttonBeingConfigured?.onConfigureTouch(event)
+                        buttonBeingConfigured!!.onConfigureTouch(event)
                     }
 
-                MotionEvent.ACTION_MOVE -> {
-                    buttonBeingConfigured?.onConfigureTouch(event)
+                MotionEvent.ACTION_MOVE -> if (buttonBeingConfigured != null) {
+                    buttonBeingConfigured!!.onConfigureTouch(event)
                     invalidate()
                     return true
                 }
 
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> if (buttonBeingConfigured == it) {
                     // Persist button position by saving new place.
-                    if (buttonBeingConfigured == it) {
-                        saveControlPosition(
-                            buttonBeingConfigured?.id ?: return@forEach,
-                            buttonBeingConfigured?.bounds?.left ?: return@forEach,
-                            buttonBeingConfigured?.bounds?.top ?: return@forEach,
-                            orientation
-                        )
-                        buttonBeingConfigured = null
-                    }
+                    saveControlPosition(
+                        buttonBeingConfigured!!.id,
+                        buttonBeingConfigured!!.bounds.left,
+                        buttonBeingConfigured!!.bounds.top, orientation
+                    )
+                    buttonBeingConfigured = null
                 }
             }
         }
@@ -253,57 +249,54 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
             when (event.action and MotionEvent.ACTION_MASK) {
                 MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN ->
                     // If no button is being moved now, remember the currently touched button to move.
-                    if (dpadBeingConfigured == null &&
+                    if (buttonBeingConfigured == null &&
                         it.bounds.contains(fingerPositionX, fingerPositionY)
                     ) {
                         dpadBeingConfigured = it
-                        dpadBeingConfigured?.onConfigureTouch(event)
+                        dpadBeingConfigured!!.onConfigureTouch(event)
                     }
 
-                MotionEvent.ACTION_MOVE -> {
-                    dpadBeingConfigured?.onConfigureTouch(event)
+                MotionEvent.ACTION_MOVE -> if (dpadBeingConfigured != null) {
+                    dpadBeingConfigured!!.onConfigureTouch(event)
                     invalidate()
                     return true
                 }
 
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
-                    if (dpadBeingConfigured == it) {
-                        saveControlPosition(
-                            dpadBeingConfigured?.upId ?: return@forEach,
-                            dpadBeingConfigured?.bounds?.left ?: return@forEach,
-                            dpadBeingConfigured?.bounds?.top ?: return@forEach,
-                            orientation
-                        )
-                        dpadBeingConfigured = null
-                    }
+                MotionEvent.ACTION_UP,
+                MotionEvent.ACTION_POINTER_UP -> if (dpadBeingConfigured == it) {
+                    // Persist button position by saving new place.
+                    saveControlPosition(
+                        dpadBeingConfigured!!.upId,
+                        dpadBeingConfigured!!.bounds.left, dpadBeingConfigured!!.bounds.top,
+                        orientation
+                    )
+                    dpadBeingConfigured = null
                 }
             }
         }
         overlayJoysticks.forEach {
             when (event.action) {
-                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN ->
-                    if (joystickBeingConfigured == null &&
-                        it.bounds.contains(fingerPositionX, fingerPositionY)
-                    ) {
-                        joystickBeingConfigured = it
-                        joystickBeingConfigured?.onConfigureTouch(event)
-                    }
+                MotionEvent.ACTION_DOWN,
+                MotionEvent.ACTION_POINTER_DOWN -> if (joystickBeingConfigured == null &&
+                    it.bounds.contains(fingerPositionX, fingerPositionY)
+                ) {
+                    joystickBeingConfigured = it
+                    joystickBeingConfigured!!.onConfigureTouch(event)
+                }
 
-                MotionEvent.ACTION_MOVE -> {
-                    joystickBeingConfigured?.onConfigureTouch(event)
+                MotionEvent.ACTION_MOVE -> if (joystickBeingConfigured != null) {
+                    joystickBeingConfigured!!.onConfigureTouch(event)
                     invalidate()
                 }
 
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
-                    if (joystickBeingConfigured != null) {
-                        saveControlPosition(
-                            joystickBeingConfigured?.joystickId ?: return@forEach,
-                            joystickBeingConfigured?.bounds?.left ?: return@forEach,
-                            joystickBeingConfigured?.bounds?.top ?: return@forEach,
-                            orientation
-                        )
-                        joystickBeingConfigured = null
-                    }
+                MotionEvent.ACTION_UP,
+                MotionEvent.ACTION_POINTER_UP -> if (joystickBeingConfigured != null) {
+                    saveControlPosition(
+                        joystickBeingConfigured!!.joystickId,
+                        joystickBeingConfigured!!.bounds.left,
+                        joystickBeingConfigured!!.bounds.top, orientation
+                    )
+                    joystickBeingConfigured = null
                 }
             }
         }
@@ -471,6 +464,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
                 )
             )
         }
+
         if (preferences.getBoolean("buttonToggle14", false)) {
             overlayButtons.add(
                 initializeOverlayButton(
@@ -557,17 +551,17 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             // For API 30 and above
-            val windowMetrics: WindowMetrics? =
-                (context as? Activity)?.windowManager?.currentWindowMetrics
-            val bounds = windowMetrics?.bounds
-            maxX = bounds?.height()?.toFloat() ?: 0f
-            maxY = bounds?.width()?.toFloat() ?: 0f
+            val windowMetrics: WindowMetrics =
+                (context as Activity).windowManager.currentWindowMetrics
+            val bounds = windowMetrics.bounds
+            maxX = bounds.height().toFloat()
+            maxY = bounds.width().toFloat()
         } else {
             // For API 29 and below
-            @Suppress("DEPRECATION") val display =
-                (context as? Activity)?.windowManager?.defaultDisplay
+            val display =
+                @Suppress("DEPRECATION") (context as Activity).windowManager.defaultDisplay
             val outMetrics = DisplayMetrics()
-            @Suppress("DEPRECATION") display?.getMetrics(outMetrics)
+            @Suppress("DEPRECATION") display.getMetrics(outMetrics)
             maxX = outMetrics.heightPixels.toFloat()
             maxY = outMetrics.widthPixels.toFloat()
         }
@@ -712,17 +706,17 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             // For API 30 and above
-            val windowMetrics: WindowMetrics? =
-                (context as? Activity)?.windowManager?.currentWindowMetrics
-            val bounds = windowMetrics?.bounds
-            maxX = bounds?.height()?.toFloat() ?: 0f
-            maxY = bounds?.width()?.toFloat() ?: 0f
+            val windowMetrics: WindowMetrics =
+                (context as Activity).windowManager.currentWindowMetrics
+            val bounds = windowMetrics.bounds
+            maxX = bounds.height().toFloat()
+            maxY = bounds.width().toFloat()
         } else {
             // For API 29 and below
-            @Suppress("DEPRECATION") val display =
-                (context as? Activity)?.windowManager?.defaultDisplay
+            val display =
+                @Suppress("DEPRECATION") (context as Activity).windowManager.defaultDisplay
             val outMetrics = DisplayMetrics()
-            @Suppress("DEPRECATION") display?.getMetrics(outMetrics)
+            @Suppress("DEPRECATION") display.getMetrics(outMetrics)
             maxX = outMetrics.heightPixels.toFloat()
             maxY = outMetrics.widthPixels.toFloat()
         }
@@ -886,8 +880,7 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
             } catch (_: NullPointerException) {
             }
 
-            val vectorDrawable = ContextCompat.getDrawable(context, drawableId) as? VectorDrawable
-                ?: throw NullPointerException("Drawable not found")
+            val vectorDrawable = ContextCompat.getDrawable(context, drawableId) as VectorDrawable
 
             val bitmap = Bitmap.createBitmap(
                 (vectorDrawable.intrinsicWidth * scale).toInt(),
@@ -981,9 +974,9 @@ class InputOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(contex
 
                 else -> 0.11f
             }
-
             scale *= (preferences.getInt("controlScale", 50) + 50).toFloat()
             scale /= 100f
+
 
             scale *= (preferences.getInt("controlScale-$buttonId", 50) + 50).toFloat()
             scale /= 100f
