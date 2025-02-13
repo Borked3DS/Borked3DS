@@ -12,7 +12,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup.MarginLayoutParams
-import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.view.animation.PathInterpolator
 import android.widget.Toast
@@ -23,6 +22,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -94,11 +94,37 @@ class MainActivity : AppCompatActivity(), ThemeProvider {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
 
-        val insetsController = window.insetsController
-        insetsController?.setSystemBarsAppearance(
-            WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
-            WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+        val windowInsetsController = WindowInsetsControllerCompat(window, binding.root)
+        val isDarkMode = !ThemeUtil.isNightMode(this)
+
+        windowInsetsController.apply {
+            // Handle both status bar and navigation bar appearances
+            isAppearanceLightStatusBars = isDarkMode
+            isAppearanceLightNavigationBars = isDarkMode
+        }
+
+        binding.statusBarShade.setBackgroundColor(
+            ThemeUtil.getColorWithOpacity(
+                MaterialColors.getColor(
+                    binding.root,
+                    com.google.android.material.R.attr.colorSurface
+                ),
+                ThemeUtil.SYSTEM_BAR_ALPHA
+            )
         )
+        if (InsetsHelper.getSystemGestureType(applicationContext) !=
+            InsetsHelper.GESTURE_NAVIGATION
+        ) {
+            binding.navigationBarShade.setBackgroundColor(
+                ThemeUtil.getColorWithOpacity(
+                    MaterialColors.getColor(
+                        binding.root,
+                        com.google.android.material.R.attr.colorSurface
+                    ),
+                    ThemeUtil.SYSTEM_BAR_ALPHA
+                )
+            )
+        }
 
         binding.statusBarShade.setBackgroundColor(
             ThemeUtil.getColorWithOpacity(

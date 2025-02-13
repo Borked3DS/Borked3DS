@@ -11,7 +11,6 @@ import android.graphics.Color
 import androidx.annotation.ColorInt
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.preference.PreferenceManager
 import io.github.borked3ds.android.Borked3DSApplication
@@ -20,6 +19,7 @@ import io.github.borked3ds.android.features.settings.model.Settings
 import io.github.borked3ds.android.ui.main.ThemeProvider
 import kotlin.math.roundToInt
 
+@Suppress("DEPRECATION")
 object ThemeUtil {
     const val SYSTEM_BAR_ALPHA = 0.9f
 
@@ -44,6 +44,11 @@ object ThemeUtil {
         return themes[themeIndex]
     }
 
+    private fun getThemeMode(activity: AppCompatActivity): Int {
+        return PreferenceManager.getDefaultSharedPreferences(activity.applicationContext)
+            .getInt(Settings.PREF_THEME_MODE, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+    }
+
     fun setTheme(activity: AppCompatActivity) {
         setThemeMode(activity)
         if (preferences.getBoolean(Settings.PREF_MATERIAL_YOU, false)) {
@@ -63,40 +68,37 @@ object ThemeUtil {
     }
 
     fun setThemeMode(activity: AppCompatActivity) {
-        val themeMode = PreferenceManager.getDefaultSharedPreferences(activity.applicationContext)
-            .getInt(Settings.PREF_THEME_MODE, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+        val themeMode = getThemeMode(activity)
         activity.delegate.localNightMode = themeMode
-        val windowController = WindowCompat.getInsetsController(
-            activity.window,
-            activity.window.decorView
-        )
-        when (themeMode) {
-            AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM -> when (isNightMode(activity)) {
-                false -> setLightModeSystemBars(windowController)
-                true -> setDarkModeSystemBars(windowController)
-            }
+        configureSystemBars(activity, themeMode)
+    }
 
-            AppCompatDelegate.MODE_NIGHT_NO -> setLightModeSystemBars(windowController)
-            AppCompatDelegate.MODE_NIGHT_YES -> setDarkModeSystemBars(windowController)
+    private fun configureSystemBars(activity: AppCompatActivity, themeMode: Int) {
+        val nightMode = when (themeMode) {
+            AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM -> isNightMode(activity)
+            AppCompatDelegate.MODE_NIGHT_YES -> true
+            else -> false
+        }
+
+        val window = activity.window
+        val decorView = window.decorView
+
+        // Use WindowInsetsControllerCompat for all Android versions
+        val windowInsetsController = WindowInsetsControllerCompat(window, decorView)
+
+        // Configure both status bar and navigation bar appearances
+        windowInsetsController.apply {
+            isAppearanceLightStatusBars = !nightMode
+            isAppearanceLightNavigationBars = !nightMode
         }
     }
 
-    private fun isNightMode(activity: AppCompatActivity): Boolean {
+    internal fun isNightMode(activity: AppCompatActivity): Boolean {
         return when (activity.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) {
             Configuration.UI_MODE_NIGHT_NO -> false
             Configuration.UI_MODE_NIGHT_YES -> true
             else -> false
         }
-    }
-
-    private fun setLightModeSystemBars(windowController: WindowInsetsControllerCompat) {
-        windowController.isAppearanceLightStatusBars = true
-        windowController.isAppearanceLightNavigationBars = true
-    }
-
-    private fun setDarkModeSystemBars(windowController: WindowInsetsControllerCompat) {
-        windowController.isAppearanceLightStatusBars = false
-        windowController.isAppearanceLightNavigationBars = false
     }
 
     fun setCorrectTheme(activity: AppCompatActivity) {
