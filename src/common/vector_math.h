@@ -32,9 +32,11 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <cstring>
+#include <new>
 #include <type_traits>
 #include <boost/serialization/access.hpp>
 
@@ -65,7 +67,7 @@
 #if defined(__AVX2__)
 #define HAVE_AVX2
 #endif
-#if defined(__ARM_FEATURE_FMA)
+#if !defined(__FMA__) && defined(__AVX2__)
 #define HAVE_FMA
 #endif
 
@@ -150,14 +152,20 @@ public:
             // Store directly to result using lower 64 bits
             _mm_store_sd(reinterpret_cast<double*>(&result.x), _mm_castps_pd(sum));
 #elif defined(HAVE_NEON)
-            // Direct initialization of NEON vectors
-            float32x2_t a =
-                vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<const uint64_t*>(&x))));
-            float32x2_t b =
-                vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<const uint64_t*>(&other.x))));
-            // Add and store directly
+            // Create temporary storage for safe type punning
+            uint64_t a_bits, b_bits;
+            std::memcpy(&a_bits, &x, sizeof(uint64_t));
+            std::memcpy(&b_bits, &other.x, sizeof(uint64_t));
+
+            // Create NEON vectors and add
+            float32x2_t a = vcreate_f32(a_bits);
+            float32x2_t b = vcreate_f32(b_bits);
             float32x2_t sum = vadd_f32(a, b);
-            vst1_f32(&result.x, sum);
+
+            // Store back the result
+            float result_array[2];
+            vst1_f32(result_array, sum);
+            std::memcpy(&result.x, result_array, sizeof(float) * 2);
 #endif
             return result;
         } else {
@@ -174,11 +182,20 @@ public:
             // Store result directly to x,y using 64-bit store
             _mm_store_sd(reinterpret_cast<double*>(&x), _mm_castps_pd(sum));
 #elif defined(HAVE_NEON)
-            float32x2_t a = vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<uint64_t*>(&x))));
-            float32x2_t b =
-                vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<const uint64_t*>(&other.x))));
+            // Create temporary storage for safe type punning
+            uint64_t a_bits, b_bits;
+            std::memcpy(&a_bits, &x, sizeof(uint64_t));
+            std::memcpy(&b_bits, &other.x, sizeof(uint64_t));
+
+            // Create NEON vectors and add
+            float32x2_t a = vcreate_f32(a_bits);
+            float32x2_t b = vcreate_f32(b_bits);
             float32x2_t sum = vadd_f32(a, b);
-            vst1_f32(&x, sum);
+
+            // Store back the result directly to this object's x,y
+            float result_array[2];
+            vst1_f32(result_array, sum);
+            std::memcpy(&x, result_array, sizeof(float) * 2);
 #endif
         } else {
             x += other.x;
@@ -197,12 +214,20 @@ public:
             // Store result directly using 64-bit store
             _mm_store_sd(reinterpret_cast<double*>(&result.x), _mm_castps_pd(diff));
 #elif defined(HAVE_NEON)
-            float32x2_t a =
-                vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<const uint64_t*>(&x))));
-            float32x2_t b =
-                vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<const uint64_t*>(&other.x))));
+            // Create temporary storage for safe type punning
+            uint64_t a_bits, b_bits;
+            std::memcpy(&a_bits, &x, sizeof(uint64_t));
+            std::memcpy(&b_bits, &other.x, sizeof(uint64_t));
+
+            // Create NEON vectors and subtract
+            float32x2_t a = vcreate_f32(a_bits);
+            float32x2_t b = vcreate_f32(b_bits);
             float32x2_t diff = vsub_f32(a, b);
-            vst1_f32(&result.x, diff);
+
+            // Store back the result
+            float result_array[2];
+            vst1_f32(result_array, diff);
+            std::memcpy(&result.x, result_array, sizeof(float) * 2);
 #endif
             return result;
         } else {
@@ -219,11 +244,20 @@ public:
             // Store directly to x,y using 64-bit store
             _mm_store_sd(reinterpret_cast<double*>(&x), _mm_castps_pd(diff));
 #elif defined(HAVE_NEON)
-            float32x2_t a = vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<uint64_t*>(&x))));
-            float32x2_t b =
-                vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<const uint64_t*>(&other.x))));
+            // Create temporary storage for safe type punning
+            uint64_t a_bits, b_bits;
+            std::memcpy(&a_bits, &x, sizeof(uint64_t));
+            std::memcpy(&b_bits, &other.x, sizeof(uint64_t));
+
+            // Create NEON vectors and subtract
+            float32x2_t a = vcreate_f32(a_bits);
+            float32x2_t b = vcreate_f32(b_bits);
             float32x2_t diff = vsub_f32(a, b);
-            vst1_f32(&x, diff);
+
+            // Store back the result directly to this object's x,y
+            float result_array[2];
+            vst1_f32(result_array, diff);
+            std::memcpy(&x, result_array, sizeof(float) * 2);
 #endif
         } else {
             x -= other.x;
@@ -242,10 +276,18 @@ public:
             // Store directly using 64-bit store
             _mm_store_sd(reinterpret_cast<double*>(&result.x), _mm_castps_pd(neg));
 #elif defined(HAVE_NEON)
-            float32x2_t a =
-                vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<const uint64_t*>(&x))));
+            // Create temporary storage for safe type punning
+            uint64_t vec_bits;
+            std::memcpy(&vec_bits, &x, sizeof(uint64_t));
+
+            // Create NEON vector and negate it
+            float32x2_t a = vcreate_f32(vec_bits);
             float32x2_t neg = vneg_f32(a);
-            vst1_f32(&result.x, neg);
+
+            // Store back the result
+            float result_array[2];
+            vst1_f32(result_array, neg);
+            std::memcpy(&result.x, result_array, sizeof(float) * 2);
 #endif
             return result;
         } else {
@@ -263,12 +305,20 @@ public:
             // Store directly using 64-bit store
             _mm_store_sd(reinterpret_cast<double*>(&result.x), _mm_castps_pd(prod));
 #elif defined(HAVE_NEON)
-            float32x2_t a =
-                vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<const uint64_t*>(&x))));
-            float32x2_t b =
-                vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<const uint64_t*>(&other.x))));
+            // Create temporary storage for safe type punning
+            uint64_t a_bits, b_bits;
+            std::memcpy(&a_bits, &x, sizeof(uint64_t));
+            std::memcpy(&b_bits, &other.x, sizeof(uint64_t));
+
+            // Create NEON vectors and multiply
+            float32x2_t a = vcreate_f32(a_bits);
+            float32x2_t b = vcreate_f32(b_bits);
             float32x2_t prod = vmul_f32(a, b);
-            vst1_f32(&result.x, prod);
+
+            // Store back the result
+            float result_array[2];
+            vst1_f32(result_array, prod);
+            std::memcpy(&result.x, result_array, sizeof(float) * 2);
 #endif
             return result;
         } else {
@@ -287,11 +337,19 @@ public:
             // Store directly using 64-bit store
             _mm_store_sd(reinterpret_cast<double*>(&result.x), _mm_castps_pd(prod));
 #elif defined(HAVE_NEON)
-            float32x2_t a =
-                vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<const uint64_t*>(&x))));
+            // Create temporary storage for safe type punning
+            uint64_t vec_bits;
+            std::memcpy(&vec_bits, &x, sizeof(uint64_t));
+
+            // Create NEON vectors and multiply
+            float32x2_t a = vcreate_f32(vec_bits);
             float32x2_t b = vdup_n_f32(f);
             float32x2_t prod = vmul_f32(a, b);
-            vst1_f32(&result.x, prod);
+
+            // Store back the result
+            float result_array[2];
+            vst1_f32(result_array, prod);
+            std::memcpy(&result.x, result_array, sizeof(float) * 2);
 #endif
             return result;
         } else {
@@ -309,10 +367,19 @@ public:
             // Store directly to x,y using 64-bit store
             _mm_store_sd(reinterpret_cast<double*>(&x), _mm_castps_pd(prod));
 #elif defined(HAVE_NEON)
-            float32x2_t a = vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<uint64_t*>(&x))));
+            // Create temporary storage for safe type punning
+            uint64_t a_bits;
+            std::memcpy(&a_bits, &x, sizeof(uint64_t));
+
+            // Create NEON vectors and multiply
+            float32x2_t a = vcreate_f32(a_bits);
             float32x2_t b = vdup_n_f32(f);
             float32x2_t prod = vmul_f32(a, b);
-            vst1_f32(&x, prod);
+
+            // Store back the result directly to this object's x,y
+            float result_array[2];
+            vst1_f32(result_array, prod);
+            std::memcpy(&x, result_array, sizeof(float) * 2);
 #endif
         } else {
             *this = *this * f;
@@ -331,12 +398,19 @@ public:
             // Store directly using 64-bit store
             _mm_store_sd(reinterpret_cast<double*>(&result.x), _mm_castps_pd(quot));
 #elif defined(HAVE_NEON)
-            float32x2_t a =
-                vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<const uint64_t*>(&x))));
-            // NEON doesn't have direct division, use reciprocal multiplication
+            // Create temporary storage for safe type punning
+            uint64_t a_bits;
+            std::memcpy(&a_bits, &x, sizeof(uint64_t));
+
+            // Create NEON vectors and divide (using reciprocal multiplication)
+            float32x2_t a = vcreate_f32(a_bits);
             float32x2_t recip = vdup_n_f32(1.0f / f);
             float32x2_t quot = vmul_f32(a, recip);
-            vst1_f32(&result.x, quot);
+
+            // Store back the result
+            float result_array[2];
+            vst1_f32(result_array, quot);
+            std::memcpy(&result.x, result_array, sizeof(float) * 2);
 #endif
             return result;
         } else {
@@ -354,11 +428,19 @@ public:
             // Store directly to x,y using 64-bit store
             _mm_store_sd(reinterpret_cast<double*>(&x), _mm_castps_pd(quot));
 #elif defined(HAVE_NEON)
-            float32x2_t a = vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<uint64_t*>(&x))));
-            // NEON doesn't have direct division, use reciprocal multiplication
+            // Create temporary storage for safe type punning
+            uint64_t a_bits;
+            std::memcpy(&a_bits, &x, sizeof(uint64_t));
+
+            // Create NEON vectors and divide (using reciprocal multiplication)
+            float32x2_t a = vcreate_f32(a_bits);
             float32x2_t recip = vdup_n_f32(1.0f / f);
             float32x2_t quot = vmul_f32(a, recip);
-            vst1_f32(&x, quot);
+
+            // Store back the result directly to this object's x,y
+            float result_array[2];
+            vst1_f32(result_array, quot);
+            std::memcpy(&x, result_array, sizeof(float) * 2);
 #endif
         } else {
             *this = *this / f;
@@ -378,10 +460,17 @@ public:
             return _mm_cvtss_f32(_mm_add_ss(sq, _mm_shuffle_ps(sq, sq, _MM_SHUFFLE(1, 1, 1, 1))));
 #endif
 #elif defined(HAVE_NEON)
-            float32x2_t v =
-                vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<const uint64_t*>(&x))));
+            // Create temporary storage for safe type punning
+            uint64_t v_bits;
+            std::memcpy(&v_bits, &x, sizeof(uint64_t));
+
+            // Create NEON vector and compute squared length
+            float32x2_t v = vcreate_f32(v_bits);
             float32x2_t sq = vmul_f32(v, v);
-            return vget_lane_f32(vpadd_f32(sq, sq), 0);
+
+            // Horizontal add of the squares using vpadd
+            float32x2_t sum = vpadd_f32(sq, sq);
+            return vget_lane_f32(sum, 0);
 #endif
         } else {
             return x * x + y * y;
@@ -397,11 +486,17 @@ public:
             // Simplified mask check using only lower 2 bits
             return (_mm_movemask_ps(cmp) & 3) != 3;
 #elif defined(HAVE_NEON)
-            float32x2_t a =
-                vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<const uint64_t*>(&x))));
-            float32x2_t b =
-                vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<const uint64_t*>(&other.x))));
+            // Create temporary storage for safe type punning
+            uint64_t a_bits, b_bits;
+            std::memcpy(&a_bits, &x, sizeof(uint64_t));
+            std::memcpy(&b_bits, &other.x, sizeof(uint64_t));
+
+            // Create NEON vectors and compare
+            float32x2_t a = vcreate_f32(a_bits);
+            float32x2_t b = vcreate_f32(b_bits);
             uint32x2_t cmp = vceq_f32(a, b);
+
+            // Convert comparison result to 64-bit value and check
             uint64x1_t result = vreinterpret_u64_u32(cmp);
             return vget_lane_u64(result, 0) != UINT64_C(0xFFFFFFFFFFFFFFFF);
 #endif
@@ -419,11 +514,17 @@ public:
             // Simplified mask check using only lower 2 bits
             return (_mm_movemask_ps(cmp) & 3) == 3;
 #elif defined(HAVE_NEON)
-            float32x2_t a =
-                vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<const uint64_t*>(&x))));
-            float32x2_t b =
-                vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<const uint64_t*>(&other.x))));
+            // Create temporary storage for safe type punning
+            uint64_t a_bits, b_bits;
+            std::memcpy(&a_bits, &x, sizeof(uint64_t));
+            std::memcpy(&b_bits, &other.x, sizeof(uint64_t));
+
+            // Create NEON vectors and compare
+            float32x2_t a = vcreate_f32(a_bits);
+            float32x2_t b = vcreate_f32(b_bits);
             uint32x2_t cmp = vceq_f32(a, b);
+
+            // Convert comparison result to 64-bit value and check
             uint64x1_t result = vreinterpret_u64_u32(cmp);
             return vget_lane_u64(result, 0) == UINT64_C(0xFFFFFFFFFFFFFFFF);
 #endif
@@ -536,14 +637,24 @@ template <typename T, typename V>
             Vec2<float> result;
 #if defined(__ARM_FEATURE_FMA)
             // Use FMA on ARM if available
-            float32x2_t vvec = vld1_f32(&vec.x);
+            // Create temporary storage and use memcpy for safe data access
+            float vec_array[2];
+            std::memcpy(vec_array, &vec.x, sizeof(float) * 2);
+
+            float32x2_t vvec = vld1_f32(vec_array);
             float32x2_t vf = vdup_n_f32(f);
             float32x2_t vresult = vmul_f32(vf, vvec);
-            vst1_f32(&result.x, vresult);
+
+            // Store result safely using memcpy
+            vst1_f32(vec_array, vresult);
+            std::memcpy(&result.x, vec_array, sizeof(float) * 2);
 #else
-            float32x2_t vvec = {vec.x, vec.y};
+            // Standard NEON path
+            float vec_array[2] = {vec.x, vec.y};
+            float32x2_t vvec = vld1_f32(vec_array);
             float32x2_t vf = vdup_n_f32(f);
             float32x2_t vresult = vmul_f32(vf, vvec);
+
             result.x = vget_lane_f32(vresult, 0);
             result.y = vget_lane_f32(vresult, 1);
 #endif
@@ -552,14 +663,17 @@ template <typename T, typename V>
             Vec2<decltype(V{} * T{})> result;
             if constexpr (sizeof(T) <= 2) {
                 // For 16-bit integers
-                int16x4_t vvec = {static_cast<int16_t>(vec.x), static_cast<int16_t>(vec.y), 0, 0};
+                int16_t vec_array[4] = {static_cast<int16_t>(vec.x), static_cast<int16_t>(vec.y), 0,
+                                        0};
+                int16x4_t vvec = vld1_s16(vec_array);
                 int16x4_t vf = vdup_n_s16(static_cast<int16_t>(f));
                 int16x4_t vresult = vmul_s16(vf, vvec);
                 result.x = static_cast<T>(vget_lane_s16(vresult, 0));
                 result.y = static_cast<T>(vget_lane_s16(vresult, 1));
             } else {
                 // For 32-bit integers
-                int32x2_t vvec = {static_cast<int32_t>(vec.x), static_cast<int32_t>(vec.y)};
+                int32_t vec_array[2] = {static_cast<int32_t>(vec.x), static_cast<int32_t>(vec.y)};
+                int32x2_t vvec = vld1_s32(vec_array);
                 int32x2_t vf = vdup_n_s32(static_cast<int32_t>(f));
                 int32x2_t vresult = vmul_s32(vf, vvec);
                 result.x = static_cast<T>(vget_lane_s32(vresult, 0));
@@ -596,10 +710,18 @@ inline float Vec2<float>::Length() const {
         _mm_sqrt_ss(_mm_add_ss(sq, _mm_shuffle_ps(sq, sq, _MM_SHUFFLE(1, 1, 1, 1)))));
 #endif
 #elif defined(HAVE_NEON)
-    float32x2_t v = vcreate_f32(static_cast<uint64_t>(*(reinterpret_cast<const uint64_t*>(&x))));
+    // Create temporary storage for safe type punning
+    uint64_t v_bits;
+    std::memcpy(&v_bits, &x, sizeof(uint64_t));
+
+    // Create NEON vector and compute squared length
+    float32x2_t v = vcreate_f32(v_bits);
     float32x2_t sq = vmul_f32(v, v);
     float32x2_t sum = vpadd_f32(sq, sq);
-    return vget_lane_f32(vsqrt_f32(vdup_n_f32(vget_lane_f32(sum, 0))), 0);
+
+    // Extract scalar value, compute square root, and return
+    float sum_scalar = vget_lane_f32(sum, 0);
+    return vget_lane_f32(vsqrt_f32(vdup_n_f32(sum_scalar)), 0);
 #else
     return std::sqrt(x * x + y * y);
 #endif
@@ -643,6 +765,16 @@ public:
 #endif
     };
 
+    constexpr void SetZero() {
+        x = 0;
+        y = 0;
+        z = 0;
+        if constexpr (detail::is_vectorizable<T>::value) {
+            // Initialize the padding to maintain a consistent state
+            pad = 0;
+        }
+    }
+
     constexpr Vec3() = default;
     constexpr Vec3(const T& x_, const T& y_, const T& z_) : x(x_), y(y_), z(z_) {}
     static constexpr std::size_t dimension = 3;
@@ -680,17 +812,36 @@ public:
             }
 #elif defined(HAVE_NEON)
             if constexpr (std::is_same_v<T, float> && std::is_same_v<T2, float>) {
-                // Use unaligned load/store for better flexibility
-                float32x4_t v = vld1q_f32(&x);
-                vst1q_f32(&result.x, v);
+                // Use temporary arrays for safe memory operations
+                float temp[4];
+                std::memcpy(temp, &x, sizeof(float) * 3);
+
+                float32x4_t v = vld1q_f32(temp);
+                vst1q_f32(temp, v);
+
+                std::memcpy(&result.x, temp, sizeof(float) * 3);
             } else if constexpr (std::is_same_v<T, int32_t> && std::is_same_v<T2, float>) {
-                // Integer to float conversion
-                int32x4_t vi = vld1q_s32(reinterpret_cast<const int32_t*>(&x));
-                vst1q_f32(&result.x, vcvtq_f32_s32(vi));
+                // Integer to float conversion using safe memory handling
+                int32_t temp_in[4];
+                float temp_out[4];
+                std::memcpy(temp_in, &x, sizeof(int32_t) * 3);
+
+                int32x4_t vi = vld1q_s32(temp_in);
+                float32x4_t vf = vcvtq_f32_s32(vi);
+                vst1q_f32(temp_out, vf);
+
+                std::memcpy(&result.x, temp_out, sizeof(float) * 3);
             } else if constexpr (std::is_same_v<T, float> && std::is_same_v<T2, int32_t>) {
-                // Float to integer conversion
-                float32x4_t v = vld1q_f32(&x);
-                vst1q_s32(reinterpret_cast<int32_t*>(&result.x), vcvtq_s32_f32(v));
+                // Float to integer conversion using safe memory handling
+                float temp_in[4];
+                int32_t temp_out[4];
+                std::memcpy(temp_in, &x, sizeof(float) * 3);
+
+                float32x4_t v = vld1q_f32(temp_in);
+                int32x4_t vi = vcvtq_s32_f32(v);
+                vst1q_s32(temp_out, vi);
+
+                std::memcpy(&result.x, temp_out, sizeof(int32_t) * 3);
             } else {
                 // Fallback to scalar for other type conversions
                 result.x = static_cast<T2>(x);
@@ -713,11 +864,17 @@ public:
             _mm_storeu_ps(&result.x, _mm_set1_ps(f));
 #elif defined(HAVE_NEON)
             if constexpr (std::is_same_v<T, float>) {
-                // Optimal for float type
-                vst1q_f32(&result.x, vdupq_n_f32(f));
+                // Optimal for float type using temporary array
+                float temp[4];
+                float32x4_t v = vdupq_n_f32(f);
+                vst1q_f32(temp, v);
+                std::memcpy(&result.x, temp, sizeof(float) * 3);
             } else if constexpr (std::is_same_v<T, int32_t>) {
-                // Support for integer type
-                vst1q_s32(reinterpret_cast<int32_t*>(&result.x), vdupq_n_s32(f));
+                // Support for integer type using temporary array
+                int32_t temp[4];
+                int32x4_t v = vdupq_n_s32(f);
+                vst1q_s32(temp, v);
+                std::memcpy(&result.x, temp, sizeof(int32_t) * 3);
             }
 #endif
             return result;
@@ -736,15 +893,35 @@ public:
             _mm_storeu_ps(&result.x, _mm_add_ps(a, b));
 #elif defined(HAVE_NEON)
             if constexpr (std::is_same_v<T, float>) {
-                // Optimal for float type
-                float32x4_t a = vld1q_f32(&x);
-                float32x4_t b = vld1q_f32(&other.x);
-                vst1q_f32(&result.x, vaddq_f32(a, b));
+                // Optimal for float type using temporary arrays
+                float temp_a[4], temp_b[4], temp_result[4];
+
+                // Safely copy input vectors to temporary arrays
+                std::memcpy(temp_a, &x, sizeof(float) * 3);
+                std::memcpy(temp_b, &other.x, sizeof(float) * 3);
+
+                // Perform NEON vector addition
+                float32x4_t a = vld1q_f32(temp_a);
+                float32x4_t b = vld1q_f32(temp_b);
+                vst1q_f32(temp_result, vaddq_f32(a, b));
+
+                // Safely copy result back
+                std::memcpy(&result.x, temp_result, sizeof(float) * 3);
             } else if constexpr (std::is_same_v<T, int32_t>) {
-                // Support for integer type
-                int32x4_t a = vld1q_s32(reinterpret_cast<const int32_t*>(&x));
-                int32x4_t b = vld1q_s32(reinterpret_cast<const int32_t*>(&other.x));
-                vst1q_s32(reinterpret_cast<int32_t*>(&result.x), vaddq_s32(a, b));
+                // Support for integer type using temporary arrays
+                int32_t temp_a[4], temp_b[4], temp_result[4];
+
+                // Safely copy input vectors to temporary arrays
+                std::memcpy(temp_a, &x, sizeof(int32_t) * 3);
+                std::memcpy(temp_b, &other.x, sizeof(int32_t) * 3);
+
+                // Perform NEON vector addition
+                int32x4_t a = vld1q_s32(temp_a);
+                int32x4_t b = vld1q_s32(temp_b);
+                vst1q_s32(temp_result, vaddq_s32(a, b));
+
+                // Safely copy result back
+                std::memcpy(&result.x, temp_result, sizeof(int32_t) * 3);
             }
 #endif
             return result;
@@ -762,15 +939,35 @@ public:
             _mm_storeu_ps(&x, _mm_add_ps(a, b));
 #elif defined(HAVE_NEON)
             if constexpr (std::is_same_v<T, float>) {
-                // Optimal for float type
-                float32x4_t a = vld1q_f32(&x);
-                float32x4_t b = vld1q_f32(&other.x);
-                vst1q_f32(&x, vaddq_f32(a, b));
+                // Optimal for float type using temporary arrays
+                float temp_a[4], temp_b[4], temp_result[4];
+
+                // Safely copy input vectors to temporary arrays
+                std::memcpy(temp_a, &x, sizeof(float) * 3);
+                std::memcpy(temp_b, &other.x, sizeof(float) * 3);
+
+                // Perform NEON vector addition
+                float32x4_t a = vld1q_f32(temp_a);
+                float32x4_t b = vld1q_f32(temp_b);
+                vst1q_f32(temp_result, vaddq_f32(a, b));
+
+                // Safely copy result back to this object
+                std::memcpy(&x, temp_result, sizeof(float) * 3);
             } else if constexpr (std::is_same_v<T, int32_t>) {
-                // Support for integer type
-                int32x4_t a = vld1q_s32(reinterpret_cast<int32_t*>(&x));
-                int32x4_t b = vld1q_s32(reinterpret_cast<const int32_t*>(&other.x));
-                vst1q_s32(reinterpret_cast<int32_t*>(&x), vaddq_s32(a, b));
+                // Support for integer type using temporary arrays
+                int32_t temp_a[4], temp_b[4], temp_result[4];
+
+                // Safely copy input vectors to temporary arrays
+                std::memcpy(temp_a, &x, sizeof(int32_t) * 3);
+                std::memcpy(temp_b, &other.x, sizeof(int32_t) * 3);
+
+                // Perform NEON vector addition
+                int32x4_t a = vld1q_s32(temp_a);
+                int32x4_t b = vld1q_s32(temp_b);
+                vst1q_s32(temp_result, vaddq_s32(a, b));
+
+                // Safely copy result back to this object
+                std::memcpy(&x, temp_result, sizeof(int32_t) * 3);
             }
 #endif
         } else {
@@ -791,15 +988,35 @@ public:
             _mm_storeu_ps(&result.x, _mm_sub_ps(a, b));
 #elif defined(HAVE_NEON)
             if constexpr (std::is_same_v<T, float>) {
-                // Optimal for float type
-                float32x4_t a = vld1q_f32(&x);
-                float32x4_t b = vld1q_f32(&other.x);
-                vst1q_f32(&result.x, vsubq_f32(a, b));
+                // Optimal for float type using temporary arrays
+                float temp_a[4], temp_b[4], temp_result[4];
+
+                // Safely copy input vectors to temporary arrays
+                std::memcpy(temp_a, &x, sizeof(float) * 3);
+                std::memcpy(temp_b, &other.x, sizeof(float) * 3);
+
+                // Perform NEON vector subtraction
+                float32x4_t a = vld1q_f32(temp_a);
+                float32x4_t b = vld1q_f32(temp_b);
+                vst1q_f32(temp_result, vsubq_f32(a, b));
+
+                // Safely copy result back
+                std::memcpy(&result.x, temp_result, sizeof(float) * 3);
             } else if constexpr (std::is_same_v<T, int32_t>) {
-                // Support for integer type
-                int32x4_t a = vld1q_s32(reinterpret_cast<const int32_t*>(&x));
-                int32x4_t b = vld1q_s32(reinterpret_cast<const int32_t*>(&other.x));
-                vst1q_s32(reinterpret_cast<int32_t*>(&result.x), vsubq_s32(a, b));
+                // Support for integer type using temporary arrays
+                int32_t temp_a[4], temp_b[4], temp_result[4];
+
+                // Safely copy input vectors to temporary arrays
+                std::memcpy(temp_a, &x, sizeof(int32_t) * 3);
+                std::memcpy(temp_b, &other.x, sizeof(int32_t) * 3);
+
+                // Perform NEON vector subtraction
+                int32x4_t a = vld1q_s32(temp_a);
+                int32x4_t b = vld1q_s32(temp_b);
+                vst1q_s32(temp_result, vsubq_s32(a, b));
+
+                // Safely copy result back
+                std::memcpy(&result.x, temp_result, sizeof(int32_t) * 3);
             }
 #endif
             return result;
@@ -817,15 +1034,35 @@ public:
             _mm_storeu_ps(&x, _mm_sub_ps(a, b));
 #elif defined(HAVE_NEON)
             if constexpr (std::is_same_v<T, float>) {
-                // Optimal for float type
-                float32x4_t a = vld1q_f32(&x);
-                float32x4_t b = vld1q_f32(&other.x);
-                vst1q_f32(&x, vsubq_f32(a, b));
+                // Optimal for float type using temporary arrays
+                float temp_a[4], temp_b[4], temp_result[4];
+
+                // Safely copy input vectors to temporary arrays
+                std::memcpy(temp_a, &x, sizeof(float) * 3);
+                std::memcpy(temp_b, &other.x, sizeof(float) * 3);
+
+                // Perform NEON vector subtraction
+                float32x4_t a = vld1q_f32(temp_a);
+                float32x4_t b = vld1q_f32(temp_b);
+                vst1q_f32(temp_result, vsubq_f32(a, b));
+
+                // Safely copy result back to this object
+                std::memcpy(&x, temp_result, sizeof(float) * 3);
             } else if constexpr (std::is_same_v<T, int32_t>) {
-                // Support for integer type
-                int32x4_t a = vld1q_s32(reinterpret_cast<int32_t*>(&x));
-                int32x4_t b = vld1q_s32(reinterpret_cast<const int32_t*>(&other.x));
-                vst1q_s32(reinterpret_cast<int32_t*>(&x), vsubq_s32(a, b));
+                // Support for integer type using temporary arrays
+                int32_t temp_a[4], temp_b[4], temp_result[4];
+
+                // Safely copy input vectors to temporary arrays
+                std::memcpy(temp_a, &x, sizeof(int32_t) * 3);
+                std::memcpy(temp_b, &other.x, sizeof(int32_t) * 3);
+
+                // Perform NEON vector subtraction
+                int32x4_t a = vld1q_s32(temp_a);
+                int32x4_t b = vld1q_s32(temp_b);
+                vst1q_s32(temp_result, vsubq_s32(a, b));
+
+                // Safely copy result back to this object
+                std::memcpy(&x, temp_result, sizeof(int32_t) * 3);
             }
 #endif
         } else {
@@ -913,15 +1150,35 @@ public:
             _mm_storeu_ps(&result.x, _mm_mul_ps(a, b));
 #elif defined(HAVE_NEON)
             if constexpr (std::is_same_v<T, float>) {
-                // Optimal for float type
-                float32x4_t a = vld1q_f32(&x);
-                float32x4_t b = vld1q_f32(&other.x);
-                vst1q_f32(&result.x, vmulq_f32(a, b));
+                // Optimal for float type using temporary arrays
+                float temp_a[4], temp_b[4], temp_result[4];
+
+                // Safely copy input vectors to temporary arrays
+                std::memcpy(temp_a, &x, sizeof(float) * 3);
+                std::memcpy(temp_b, &other.x, sizeof(float) * 3);
+
+                // Perform NEON vector multiplication
+                float32x4_t a = vld1q_f32(temp_a);
+                float32x4_t b = vld1q_f32(temp_b);
+                vst1q_f32(temp_result, vmulq_f32(a, b));
+
+                // Safely copy result back
+                std::memcpy(&result.x, temp_result, sizeof(float) * 3);
             } else if constexpr (std::is_same_v<T, int32_t>) {
-                // Support for integer type
-                int32x4_t a = vld1q_s32(reinterpret_cast<const int32_t*>(&x));
-                int32x4_t b = vld1q_s32(reinterpret_cast<const int32_t*>(&other.x));
-                vst1q_s32(reinterpret_cast<int32_t*>(&result.x), vmulq_s32(a, b));
+                // Support for integer type using temporary arrays
+                int32_t temp_a[4], temp_b[4], temp_result[4];
+
+                // Safely copy input vectors to temporary arrays
+                std::memcpy(temp_a, &x, sizeof(int32_t) * 3);
+                std::memcpy(temp_b, &other.x, sizeof(int32_t) * 3);
+
+                // Perform NEON vector multiplication
+                int32x4_t a = vld1q_s32(temp_a);
+                int32x4_t b = vld1q_s32(temp_b);
+                vst1q_s32(temp_result, vmulq_s32(a, b));
+
+                // Safely copy result back
+                std::memcpy(&result.x, temp_result, sizeof(int32_t) * 3);
             }
 #endif
             return result;
@@ -948,21 +1205,48 @@ public:
             }
 #elif defined(HAVE_NEON)
             if constexpr (std::is_same_v<V, float>) {
-                // Optimal for float scalar multiplication
-                float32x4_t vec = vld1q_f32(&x);
+                // Optimal for float scalar multiplication using temporary arrays
+                float temp_vec[4], temp_result[4];
+
+                // Safely copy input vector to temporary array
+                std::memcpy(temp_vec, &x, sizeof(float) * 3);
+
+                // Perform NEON vector-scalar multiplication
+                float32x4_t vec = vld1q_f32(temp_vec);
                 float32x4_t scalar = vdupq_n_f32(f);
-                vst1q_f32(&result.x, vmulq_f32(vec, scalar));
+                vst1q_f32(temp_result, vmulq_f32(vec, scalar));
+
+                // Safely copy result back
+                std::memcpy(&result.x, temp_result, sizeof(float) * 3);
             } else if constexpr (std::is_same_v<V, int32_t>) {
                 if constexpr (std::is_same_v<T, float>) {
-                    // Float vector * int scalar
-                    float32x4_t vec = vld1q_f32(&x);
+                    // Float vector * int scalar using temporary arrays
+                    float temp_vec[4], temp_result[4];
+
+                    // Safely copy input vector to temporary array
+                    std::memcpy(temp_vec, &x, sizeof(float) * 3);
+
+                    // Perform NEON vector-scalar multiplication with float conversion
+                    float32x4_t vec = vld1q_f32(temp_vec);
                     float32x4_t scalar = vdupq_n_f32(static_cast<float>(f));
-                    vst1q_f32(&result.x, vmulq_f32(vec, scalar));
+                    vst1q_f32(temp_result, vmulq_f32(vec, scalar));
+
+                    // Safely copy result back
+                    std::memcpy(&result.x, temp_result, sizeof(float) * 3);
                 } else if constexpr (std::is_same_v<T, int32_t>) {
-                    // Int vector * int scalar
-                    int32x4_t vec = vld1q_s32(reinterpret_cast<const int32_t*>(&x));
+                    // Int vector * int scalar using temporary arrays
+                    int32_t temp_vec[4], temp_result[4];
+
+                    // Safely copy input vector to temporary array
+                    std::memcpy(temp_vec, &x, sizeof(int32_t) * 3);
+
+                    // Perform NEON vector-scalar multiplication
+                    int32x4_t vec = vld1q_s32(temp_vec);
                     int32x4_t scalar = vdupq_n_s32(f);
-                    vst1q_s32(reinterpret_cast<int32_t*>(&result.x), vmulq_s32(vec, scalar));
+                    vst1q_s32(temp_result, vmulq_s32(vec, scalar));
+
+                    // Safely copy result back
+                    std::memcpy(&result.x, temp_result, sizeof(int32_t) * 3);
                 }
             }
 #endif
@@ -989,21 +1273,48 @@ public:
             }
 #elif defined(HAVE_NEON)
             if constexpr (std::is_same_v<V, float>) {
-                // Optimal for float scalar multiplication
-                float32x4_t vec = vld1q_f32(&x);
+                // Optimal for float scalar multiplication using temporary arrays
+                float temp_vec[4], temp_result[4];
+
+                // Safely copy input vector to temporary array
+                std::memcpy(temp_vec, &x, sizeof(float) * 3);
+
+                // Perform NEON vector-scalar multiplication
+                float32x4_t vec = vld1q_f32(temp_vec);
                 float32x4_t scalar = vdupq_n_f32(f);
-                vst1q_f32(&x, vmulq_f32(vec, scalar));
+                vst1q_f32(temp_result, vmulq_f32(vec, scalar));
+
+                // Safely copy result back to this object
+                std::memcpy(&x, temp_result, sizeof(float) * 3);
             } else if constexpr (std::is_same_v<V, int32_t>) {
                 if constexpr (std::is_same_v<T, float>) {
-                    // Float vector * int scalar
-                    float32x4_t vec = vld1q_f32(&x);
+                    // Float vector * int scalar using temporary arrays
+                    float temp_vec[4], temp_result[4];
+
+                    // Safely copy input vector to temporary array
+                    std::memcpy(temp_vec, &x, sizeof(float) * 3);
+
+                    // Perform NEON vector-scalar multiplication with float conversion
+                    float32x4_t vec = vld1q_f32(temp_vec);
                     float32x4_t scalar = vdupq_n_f32(static_cast<float>(f));
-                    vst1q_f32(&x, vmulq_f32(vec, scalar));
+                    vst1q_f32(temp_result, vmulq_f32(vec, scalar));
+
+                    // Safely copy result back to this object
+                    std::memcpy(&x, temp_result, sizeof(float) * 3);
                 } else if constexpr (std::is_same_v<T, int32_t>) {
-                    // Int vector * int scalar
-                    int32x4_t vec = vld1q_s32(reinterpret_cast<int32_t*>(&x));
+                    // Int vector * int scalar using temporary arrays
+                    int32_t temp_vec[4], temp_result[4];
+
+                    // Safely copy input vector to temporary array
+                    std::memcpy(temp_vec, &x, sizeof(int32_t) * 3);
+
+                    // Perform NEON vector-scalar multiplication
+                    int32x4_t vec = vld1q_s32(temp_vec);
                     int32x4_t scalar = vdupq_n_s32(f);
-                    vst1q_s32(reinterpret_cast<int32_t*>(&x), vmulq_s32(vec, scalar));
+                    vst1q_s32(temp_result, vmulq_s32(vec, scalar));
+
+                    // Safely copy result back to this object
+                    std::memcpy(&x, temp_result, sizeof(int32_t) * 3);
                 }
             }
 #endif
@@ -1135,19 +1446,30 @@ public:
             }
 #elif defined(HAVE_NEON)
             if constexpr (std::is_same_v<T, float>) {
-                // Load vectors
-                float32x4_t a = vld1q_f32(&x);
-                float32x4_t b = vld1q_f32(&other.x);
+                // Load vectors using temporary arrays
+                float temp_a[4], temp_b[4];
+                std::memcpy(temp_a, &x, sizeof(float) * 3);
+                std::memcpy(temp_b, &other.x, sizeof(float) * 3);
+
                 // Compare for equality
+                float32x4_t a = vld1q_f32(temp_a);
+                float32x4_t b = vld1q_f32(temp_b);
                 uint32x4_t cmp = vceqq_f32(a, b);
+
                 // Use AND reduction for first 3 components only
                 return ((vgetq_lane_u32(cmp, 0) & vgetq_lane_u32(cmp, 1) &
                          vgetq_lane_u32(cmp, 2)) == 0xFFFFFFFF);
             } else if constexpr (std::is_same_v<T, int32_t>) {
-                // Integer comparison
-                int32x4_t a = vld1q_s32(reinterpret_cast<const int32_t*>(&x));
-                int32x4_t b = vld1q_s32(reinterpret_cast<const int32_t*>(&other.x));
+                // Integer comparison using temporary arrays
+                int32_t temp_a[4], temp_b[4];
+                std::memcpy(temp_a, &x, sizeof(int32_t) * 3);
+                std::memcpy(temp_b, &other.x, sizeof(int32_t) * 3);
+
+                // Compare for equality
+                int32x4_t a = vld1q_s32(temp_a);
+                int32x4_t b = vld1q_s32(temp_b);
                 uint32x4_t cmp = vceqq_s32(a, b);
+
                 // Use AND reduction for first 3 components only
                 return ((vgetq_lane_u32(cmp, 0) & vgetq_lane_u32(cmp, 1) &
                          vgetq_lane_u32(cmp, 2)) == 0xFFFFFFFF);
@@ -1188,8 +1510,11 @@ public:
             }
 #elif defined(HAVE_NEON)
             if constexpr (std::is_same_v<T, float>) {
-                // Load and square components
-                float32x4_t v = vld1q_f32(&x);
+                // Load and square components using temporary array
+                float temp[4];
+                std::memcpy(temp, &x, sizeof(float) * 3);
+
+                float32x4_t v = vld1q_f32(temp);
                 float32x4_t sq = vmulq_f32(v, v);
 
                 // Efficient horizontal add using NEON intrinsics
@@ -1199,8 +1524,11 @@ public:
 
                 return vget_lane_f32(sum, 0) + vget_lane_f32(vget_high_f32(sq), 0); // Add z
             } else if constexpr (std::is_same_v<T, int32_t>) {
-                // Integer version using NEON
-                int32x4_t v = vld1q_s32(reinterpret_cast<const int32_t*>(&x));
+                // Integer version using NEON with safe memory handling
+                int32_t temp[4];
+                std::memcpy(temp, &x, sizeof(int32_t) * 3);
+
+                int32x4_t v = vld1q_s32(temp);
                 int32x4_t sq = vmulq_s32(v, v);
 
                 // Horizontal add for integers
@@ -1227,44 +1555,87 @@ public:
 #if defined(HAVE_SSE2)
             // For Vec4 with SIMD member
             if constexpr (detail::has_simd_member<decltype(*this)>::value) {
-                alignas(16) T* const elements = reinterpret_cast<T*>(&simd);
+                // Use std::array as a type-safe container for aligned storage
+                alignas(16) std::array<T, 4>& elements =
+                    *std::launder(reinterpret_cast<std::array<T, 4>*>(&simd));
                 return elements[i];
             }
 #elif defined(HAVE_NEON)
             // For Vec4 with SIMD member
             if constexpr (detail::has_simd_member<decltype(*this)>::value) {
-                return reinterpret_cast<T*>(&simd)[i];
+                // Use std::array as a type-safe container
+                std::array<T, 4>& elements =
+                    *std::launder(reinterpret_cast<std::array<T, 4>*>(&simd));
+                return elements[i];
             }
 #endif
         }
-        // Fast pointer arithmetic for base array access
-        return *(reinterpret_cast<T*>(&x) + i);
+
+        // Use a union for safe access to the components
+        union Components {
+            struct {
+                T x, y, z;
+            };
+            std::array<T, 3> arr;
+        };
+        Components& c = *std::launder(reinterpret_cast<Components*>(this));
+        return c.arr[i];
     }
 
     [[nodiscard]] constexpr const T& operator[](std::size_t i) const {
-        assert(i < dimension && "Vector index out of bounds");
+        assert(i < 4 && "Index out of bounds in Vec4");
         if constexpr (detail::is_vectorizable<T>::value) {
 #if defined(HAVE_SSE2)
             // For Vec4 with SIMD member
-            if constexpr (detail::has_simd_member<decltype(*this)>::value) {
-                alignas(16) const T* const elements = reinterpret_cast<const T*>(&simd);
-                return elements[i];
+            if constexpr (std::is_same_v<T, float>) {
+                // Use aligned array to handle SIMD data
+                struct alignas(16) AlignedArray {
+                    T data[4];
+                };
+                const auto& elements = *std::launder(reinterpret_cast<const AlignedArray*>(&simd));
+                return elements.data[i];
+            } else if constexpr (std::is_integral_v<T>) {
+                if constexpr (sizeof(T) <= 2) {
+                    // 16-bit integers
+                    struct alignas(16) AlignedArray {
+                        T data[4];
+                    };
+                    const auto& elements =
+                        *std::launder(reinterpret_cast<const AlignedArray*>(&simd));
+                    return elements.data[i];
+                } else {
+                    // 32-bit integers
+                    struct alignas(16) AlignedArray {
+                        T data[4];
+                    };
+                    const auto& elements =
+                        *std::launder(reinterpret_cast<const AlignedArray*>(&simd));
+                    return elements.data[i];
+                }
             }
 #elif defined(HAVE_NEON)
             // For Vec4 with SIMD member
             if constexpr (detail::has_simd_member<decltype(*this)>::value) {
-                return reinterpret_cast<const T*>(&simd)[i];
+                // Use union to handle SIMD data safely
+                union AlignedAccess {
+                    float32x4_t simd;
+                    T data[4];
+                };
+                const auto& elements = *std::launder(reinterpret_cast<const AlignedAccess*>(this));
+                return elements.data[i];
             }
 #endif
         }
-        // Fast pointer arithmetic for base array access
-        return *(reinterpret_cast<const T*>(&x) + i);
-    }
 
-    constexpr void SetZero() {
-        x = 0;
-        y = 0;
-        z = 0;
+        // Use a union for safe access to components
+        union Components {
+            struct {
+                T x, y, z, w;
+            };
+            T data[4];
+        };
+        const auto& c = *std::launder(reinterpret_cast<const Components*>(this));
+        return c.data[i];
     }
 
     // Common aliases: UVW (texel coordinates), RGB (colors), STQ (texture coordinates)
@@ -1379,21 +1750,36 @@ template <typename T, typename V>
         }
 #elif defined(HAVE_NEON)
         if constexpr (std::is_same_v<V, float>) {
-            // Optimal for float scalar multiplication
+            // Optimal for float scalar multiplication using temporary arrays
+            float temp_vec[4], temp_result[4];
+            std::memcpy(temp_vec, &vec.x, sizeof(float) * 3);
+
             float32x4_t scalar = vdupq_n_f32(f);
-            float32x4_t vector = vld1q_f32(&vec.x);
-            vst1q_f32(&result.x, vmulq_f32(scalar, vector));
+            float32x4_t vector = vld1q_f32(temp_vec);
+            vst1q_f32(temp_result, vmulq_f32(scalar, vector));
+
+            std::memcpy(&result.x, temp_result, sizeof(float) * 3);
         } else if constexpr (std::is_same_v<V, int32_t>) {
             if constexpr (std::is_same_v<T, float>) {
-                // Integer scalar * float vector
+                // Integer scalar * float vector using temporary arrays
+                float temp_vec[4], temp_result[4];
+                std::memcpy(temp_vec, &vec.x, sizeof(float) * 3);
+
                 float32x4_t scalar = vdupq_n_f32(static_cast<float>(f));
-                float32x4_t vector = vld1q_f32(&vec.x);
-                vst1q_f32(&result.x, vmulq_f32(scalar, vector));
+                float32x4_t vector = vld1q_f32(temp_vec);
+                vst1q_f32(temp_result, vmulq_f32(scalar, vector));
+
+                std::memcpy(&result.x, temp_result, sizeof(float) * 3);
             } else if constexpr (std::is_same_v<T, int32_t>) {
-                // Integer scalar * integer vector
+                // Integer scalar * integer vector using temporary arrays
+                int32_t temp_vec[4], temp_result[4];
+                std::memcpy(temp_vec, &vec.x, sizeof(int32_t) * 3);
+
                 int32x4_t scalar = vdupq_n_s32(f);
-                int32x4_t vector = vld1q_s32(reinterpret_cast<const int32_t*>(&vec.x));
-                vst1q_s32(reinterpret_cast<int32_t*>(&result.x), vmulq_s32(scalar, vector));
+                int32x4_t vector = vld1q_s32(temp_vec);
+                vst1q_s32(temp_result, vmulq_s32(scalar, vector));
+
+                std::memcpy(&result.x, temp_result, sizeof(int32_t) * 3);
             }
         }
 #endif
@@ -2100,7 +2486,7 @@ public:
             }
 #elif defined(HAVE_NEON)
             if constexpr (std::is_same_v<T, float>) {
-                // Use NEON comparison for floating-point
+                // Use NEON comparison for floating-point with SIMD member
                 uint32x4_t eq = vceqq_f32(simd, other.simd);
 #if defined(__aarch64__)
                 // AArch64 has efficient all-true testing
@@ -2113,16 +2499,24 @@ public:
 #endif
             } else if constexpr (std::is_integral_v<T>) {
                 if constexpr (sizeof(T) <= 2) {
-                    // For 16-bit integers
-                    int16x4_t v1 = vld1_s16(reinterpret_cast<const int16_t*>(&x));
-                    int16x4_t v2 = vld1_s16(reinterpret_cast<const int16_t*>(&other.x));
+                    // For 16-bit integers using temporary arrays
+                    int16_t temp1[4], temp2[4];
+                    std::memcpy(temp1, &x, sizeof(T) * 4);
+                    std::memcpy(temp2, &other.x, sizeof(T) * 4);
+
+                    int16x4_t v1 = vld1_s16(temp1);
+                    int16x4_t v2 = vld1_s16(temp2);
                     uint16x4_t eq = vceq_s16(v1, v2);
                     return (vget_lane_u16(eq, 0) & vget_lane_u16(eq, 1) & vget_lane_u16(eq, 2) &
                             vget_lane_u16(eq, 3)) != 0xFFFF;
                 } else {
-                    // For 32-bit integers
-                    int32x4_t v1 = vld1q_s32(reinterpret_cast<const int32_t*>(&x));
-                    int32x4_t v2 = vld1q_s32(reinterpret_cast<const int32_t*>(&other.x));
+                    // For 32-bit integers using temporary arrays
+                    int32_t temp1[4], temp2[4];
+                    std::memcpy(temp1, &x, sizeof(T) * 4);
+                    std::memcpy(temp2, &other.x, sizeof(T) * 4);
+
+                    int32x4_t v1 = vld1q_s32(temp1);
+                    int32x4_t v2 = vld1q_s32(temp2);
                     uint32x4_t eq = vceqq_s32(v1, v2);
 #if defined(__aarch64__)
                     return !vminvq_u32(eq);
@@ -2220,6 +2614,7 @@ public:
         return std::sqrt(length2);
 #endif
     }
+
     [[nodiscard]] constexpr T& operator[](std::size_t i) {
         assert(i < 4 && "Index out of bounds in Vec4");
         if constexpr (detail::is_vectorizable<T>::value) {
@@ -2242,21 +2637,28 @@ public:
             }
 #elif defined(HAVE_NEON)
             if constexpr (std::is_same_v<T, float>) {
-                // ARM NEON float access
-                return reinterpret_cast<float*>(&simd)[i];
+                // Use std::array for type-safe access to NEON data
+                std::array<float, 4>& elements =
+                    *std::launder(reinterpret_cast<std::array<float, 4>*>(&simd));
+                return elements[i];
             } else if constexpr (std::is_integral_v<T>) {
-                if constexpr (sizeof(T) <= 2) {
-                    // 16-bit integers with NEON alignment
-                    return reinterpret_cast<T*>(&simd)[i];
-                } else {
-                    // 32-bit integers with NEON alignment
-                    return reinterpret_cast<T*>(&simd)[i];
-                }
+                // Use std::array for both 16-bit and 32-bit integers
+                std::array<T, 4>& elements =
+                    *std::launder(reinterpret_cast<std::array<T, 4>*>(&simd));
+                return elements[i];
             }
 #endif
         }
-        // Fast pointer arithmetic for standard access
-        return *(reinterpret_cast<T*>(&x) + i);
+
+        // Use a union for safe component access
+        union Components {
+            struct {
+                T x, y, z, w;
+            };
+            std::array<T, 4> arr;
+        };
+        Components& c = *std::launder(reinterpret_cast<Components*>(this));
+        return c.arr[i];
     }
 
     [[nodiscard]] constexpr const T& operator[](std::size_t i) const {
@@ -2283,21 +2685,28 @@ public:
             }
 #elif defined(HAVE_NEON)
             if constexpr (std::is_same_v<T, float>) {
-                // ARM NEON const float access
-                return reinterpret_cast<const float*>(&simd)[i];
+                // Use const std::array for type-safe access to NEON data
+                const std::array<float, 4>& elements =
+                    *std::launder(reinterpret_cast<const std::array<float, 4>*>(&simd));
+                return elements[i];
             } else if constexpr (std::is_integral_v<T>) {
-                if constexpr (sizeof(T) <= 2) {
-                    // 16-bit integers with NEON alignment
-                    return reinterpret_cast<const T*>(&simd)[i];
-                } else {
-                    // 32-bit integers with NEON alignment
-                    return reinterpret_cast<const T*>(&simd)[i];
-                }
+                // Use const std::array for both 16-bit and 32-bit integers
+                const std::array<T, 4>& elements =
+                    *std::launder(reinterpret_cast<const std::array<T, 4>*>(&simd));
+                return elements[i];
             }
 #endif
         }
-        // Fast const pointer arithmetic for standard access
-        return *(reinterpret_cast<const T*>(&x) + i);
+
+        // Use a const union for safe component access
+        union Components {
+            struct {
+                T x, y, z, w;
+            };
+            std::array<T, 4> arr;
+        };
+        const Components& c = *std::launder(reinterpret_cast<const Components*>(this));
+        return c.arr[i];
     }
 
     constexpr void SetZero() {
