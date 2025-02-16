@@ -500,13 +500,13 @@
     <!-- Debug Menu -->
     <string name="logging">Logging</string>
     <string name="log_filter_name">Log Level</string>
-    <string name="log_filter_description">Select the level of verbosity to display in the log files. All messages from that level and below will be displayed. Ranges from <i>Critical</i> (i.e. minimal) to <i>Trace</i> (i.e. everything). Default is <i>Info</i>.</string>
+    <string name="log_filter_description">Select the level of verbosity to display in the log files. All messages from that level and below will be displayed. Ranges from <i>Critical</i> (i.e. minimal) to <i>Trace</i> (i.e. everything). Default is <i>Trace</i>.</string>
     <string name="log_critical">Critical</string>
     <string name="log_error">Error</string>
     <string name="log_warning">Warning</string>
-    <string name="log_info">Info (default)</string>
+    <string name="log_info">Info</string>
     <string name="log_debug">Debug</string>
-    <string name="log_trace">Trace</string>
+    <string name="log_trace">Trace (Default)</string>
     <string name="log_filter_critical">*:Critical</string>
     <string name="log_filter_error">*:Error</string>
     <string name="log_filter_warning">*:Warning</string>

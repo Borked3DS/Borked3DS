@@ -13,16 +13,16 @@ const char* sdl2_config_file = R"(
 # It should be in the format of "engine:[engine_name],[param1]:[value1],[param2]:[value2]..."
 # Escape characters $0 (for ':'), $1 (for ',') and $2 (for '$') can be used in values
 
-# for button input, the following devices are available:
+# For button input, the following devices are available:
 #  - "keyboard" (default) for keyboard input. Required parameters:
-#      - "code": the code of the key to bind
+#      - "code": Code of the key to bind
 #  - "sdl" for joystick input using SDL. Required parameters:
-#      - "joystick": the index of the joystick to bind
-#      - "button"(optional): the index of the button to bind
-#      - "hat"(optional): the index of the hat to bind as direction buttons
-#      - "axis"(optional): the index of the axis to bind
-#      - "direction"(only used for hat): the direction name of the hat to bind. Can be "up", "down", "left" or "right"
-#      - "threshold"(only used for axis): a float value in (-1.0, 1.0) which the button is
+#      - "joystick": Index of the joystick to bind
+#      - "button"(optional): Index of the button to bind
+#      - "hat"(optional): Index of the hat to bind as direction buttons
+#      - "axis"(optional): Index of the axis to bind
+#      - "direction"(only used for hat): Direction name of the hat to bind. Can be "up", "down", "left" or "right"
+#      - "threshold"(only used for axis): Float value in (-1.0, 1.0) which the button is
 #          triggered if the axis value crosses
 #      - "direction"(only used for axis): "+" means the button is triggered when the axis value
 #          is greater than the threshold; "-" means the button is triggered when the axis value
@@ -45,29 +45,29 @@ button_zl=
 button_zr=
 button_home=
 
-# for analog input, the following devices are available:
+# For analog input, the following devices are available:
 #  - "analog_from_button" (default) for emulating analog input from direction buttons. Required parameters:
 #      - "up", "down", "left", "right": sub-devices for each direction.
 #          Should be in the format as a button input devices using escape characters, for example, "engine$0keyboard$1code$00"
-#      - "modifier": sub-devices as a modifier.
-#      - "modifier_scale": a float number representing the applied modifier scale to the analog input.
+#      - "modifier": Sub-devices as a modifier.
+#      - "modifier_scale": Float number representing the applied modifier scale to the analog input.
 #          Must be in range of 0.0-1.0. Defaults to 0.5
 #  - "sdl" for joystick input using SDL. Required parameters:
-#      - "joystick": the index of the joystick to bind
-#      - "axis_x": the index of the axis to bind as x-axis (default to 0)
-#      - "axis_y": the index of the axis to bind as y-axis (default to 1)
+#      - "joystick": Index of the joystick to bind
+#      - "axis_x": Index of the axis to bind as x-axis (default to 0)
+#      - "axis_y": Index of the axis to bind as y-axis (default to 1)
 circle_pad=
 c_stick=
 
-# for motion input, the following devices are available:
+# For motion input, the following devices are available:
 #  - "motion_emu" (default) for emulating motion input from mouse input. Required parameters:
-#      - "update_period": update period in milliseconds (default to 100)
-#      - "sensitivity": the coefficient converting mouse movement to tilting angle (default to 0.01)
-#      - "tilt_clamp": the max value of the tilt angle in degrees (default to 90)
+#      - "update_period": Update period in milliseconds (default to 100)
+#      - "sensitivity": Coefficient converting mouse movement to tilting angle (default to 0.01)
+#      - "tilt_clamp": Max value of the tilt angle in degrees (default to 90)
 #  - "cemuhookudp" reads motion input from a udp server that uses cemuhook's udp protocol
 motion_device=
 
-# for touch input, the following devices are available:
+# For touch input, the following devices are available:
 #  - "emu_window" (default) for emulating touch input from mouse input to the emulation window. No parameters required
 #  - "cemuhookudp" reads touch input from a udp server that uses cemuhook's udp protocol
 #      - "min_x", "min_y", "max_x", "max_y": defines the udp device's touch screen coordinate system
@@ -100,8 +100,8 @@ sustained_performance =
 use_cpu_jit =
 
 # Change the Clock Frequency of the emulated 3DS CPU.
-# Underclocking can increase the performance of the game at the risk of freezing.
-# Overclocking may fix lag that happens on console, but also comes with the risk of freezing.
+# Underclocking can increase the performance at the risk of freezing.
+# Overclocking may fix lagging, but at the risk of freezing.
 # Range is any positive integer (but we suspect 25 - 400 is a good idea) Default is 100
 cpu_clock_percentage =
 
@@ -110,8 +110,8 @@ cpu_clock_percentage =
 enable_custom_cpu_ticks =
 
 # Set Custom CPU ticks
-# Set a custom value of CPU ticks. Higher values can increase performance but if they're too high,
-# it may cause the game to freeze. A range of 77-21000 is recommended.
+# Set a custom value of CPU ticks. Higher values can increase performance but if too high,
+# game may freeze. Range of 77-21000 is recommended.
 enable_custom_cpu_ticks =
 
 # Downcount will be limited to a smaller time slice.
@@ -144,7 +144,7 @@ spirv_shader_gen =
 # 0 (default): Off, 1: On
 geometry_shader =
 
-# Enables a Vulkan extension that may improve the rendering quality. (Vulkan only)
+# Enables a Vulkan extension that may improve the rendering quality.
 # 0 (default): Off, 1: On
 use_sample_shading =
 
@@ -258,11 +258,11 @@ mono_render_option =
 # true or false (default)
 swap_eyes_3d =
 
-# The name of the post processing shader to apply.
+# Name of the post processing shader to apply.
 # Loaded from shaders if render_3d is off or side by side.
 pp_shader_name =
 
-# The name of the shader to apply when render_3d is anaglyph.
+# Name of the shader to apply when render_3d is anaglyph.
 # Loaded from shaders/anaglyph.
 # Options (enter as strings):
 # rendepth (builtin)
@@ -346,7 +346,7 @@ custom_portrait_bottom_y =
 custom_portrait_bottom_width =
 custom_portrait_bottom_height =
 
-# Opacity of second layer when using custom layout option (bottom screen unless swapped). Useful if positioning on top of the first layer. OpenGL only.
+# Opacity of second layer when using custom layout option. Useful if positioning on top of the first layer. OpenGL only.
 custom_second_layer_opacity =
 
 # Swaps the prominent screen with the other screen.
@@ -419,6 +419,21 @@ input_type =
 input_device =
 
 [Data Storage]
+# Whether to create a virtual SD card.
+# 1 (default): Yes, 0: No
+use_virtual_sd =
+
+# Whether to use custom storage locations
+# 1: Yes, 0 (default): No
+use_custom_storage =
+
+# The path of the virtual SD card directory.
+# empty (default) will use the user_path
+sdmc_directory =
+
+# The path of NAND directory.
+# empty (default) will use the user_path
+nand_directory =
 
 [System]
 # The system model that Borked3DS will try to emulate
@@ -497,18 +512,16 @@ camera_inner_name =
 camera_inner_config =
 camera_inner_flip =
 
-[Miscellaneous]
-
 [Debugging]
 # log_filter is a filter string which removes logs below a certain logging level,
 # each of the format `<class>:<level>`.
 #
-# Examples: *:Debug Kernel.SVC:Trace Service.*:Critical
-# Default: *:Info
+# Examples: *:Debug Kernel.SVC:Info Service.*:Critical
+# Default: *:Trace
 #
 # See src/common/logging/filter.h and src/common/logging/filter.cpp for
 # the full list of valid classes and levels.
-log_filter = *:Info
+log_filter = *:Trace
 
 # log_regex_filter is a filter that only displays logs based on the regex
 # expression in POSIX format supplied (see log_filter above). Default is "".
@@ -532,6 +545,7 @@ gdbstub_port=24689
 
 # Flush log output on every message
 # Immediately commits the debug log to file. Use this if borked3ds crashes and the log output is being cut.
+# 0: Off, 1 (default): On
 instant_debug_log =
 
 # To LLE a service module add "LLE\<module name>=true"

@@ -18,7 +18,7 @@ enum class StringSetting(
     CAMERA_OUTER_LEFT_CONFIG("camera_outer_left_config", Settings.SECTION_CAMERA, "_back"),
     CAMERA_OUTER_RIGHT_NAME("camera_outer_right_name", Settings.SECTION_CAMERA, "ndk"),
     CAMERA_OUTER_RIGHT_CONFIG("camera_outer_right_config", Settings.SECTION_CAMERA, "_back"),
-    LOG_FILTER("log_filter", Settings.SECTION_DEBUG, "*:Info"),
+    LOG_FILTER("log_filter", Settings.SECTION_DEBUG, "*:Trace"),
     LOG_REGEX_FILTER("log_regex_filter", Settings.SECTION_DEBUG, "");
 
     override var string: String = defaultValue

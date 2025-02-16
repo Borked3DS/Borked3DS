@@ -610,7 +610,7 @@ struct Values {
     Setting<bool> delay_start_for_lle_modules{true, "delay_start_for_lle_modules"};
     Setting<bool> use_gdbstub{false, "use_gdbstub"};
     Setting<u16> gdbstub_port{24689, "gdbstub_port"};
-    Setting<bool> instant_debug_log{false, "instant_debug_log"};
+    Setting<bool> instant_debug_log{true, "instant_debug_log"};
 
     // Hacks
     SwitchableSetting<bool> enable_custom_cpu_ticks{false, "enable_custom_cpu_ticks"};
@@ -623,7 +623,7 @@ struct Values {
     SwitchableSetting<bool> upscaling_hack{false, "upscaling_hack"};
 
     // Miscellaneous
-    Setting<std::string> log_filter{"*:Info", "log_filter"};
+    Setting<std::string> log_filter{"*:Trace", "log_filter"};
     Setting<std::string> log_regex_filter{"", "log_regex_filter"};
 
     // Video Dumping
