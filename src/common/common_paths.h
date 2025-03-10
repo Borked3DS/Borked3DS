@@ -8,6 +8,7 @@
 // Directory separators, do we need this?
 #define DIR_SEP "/"
 #define DIR_SEP_CHR '/'
+#define DIR_SEP_CHR_WIN '\\'
 
 #ifndef MAX_PATH
 #define MAX_PATH 260
