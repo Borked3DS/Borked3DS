@@ -37,6 +37,7 @@ enum class BooleanSetting(
     SKIP_CPU_WRITE("skip_cpu_write", Settings.SECTION_RENDERER, false),
     UPSCALING_HACK("upscaling_hack", Settings.SECTION_RENDERER, false),
     SWAP_EYES_3D("swap_eyes_3d", Settings.SECTION_RENDERER, false),
+    ENABLE_CUSTOM_CPU_TICKS("enable_custom_cpu_ticks", Settings.SECTION_CORE, false),
     DISABLE_RIGHT_EYE_RENDER("disable_right_eye_render", Settings.SECTION_RENDERER, true),
     CUSTOM_TEXTURES("custom_textures", Settings.SECTION_UTILITY, false),
     DUMP_TEXTURES("dump_textures", Settings.SECTION_UTILITY, false),
@@ -95,6 +96,8 @@ enum class BooleanSetting(
             VSYNC,
             CPU_JIT,
             CORE_DOWNCOUNT_HACK,
+            ASYNC_CUSTOM_LOADING,
+            SHADERS_ACCURATE_MUL,
             DEBUG_RENDERER
         )
 

@@ -1797,11 +1797,11 @@ class SettingsFragmentPresenter(private val fragmentView: SettingsFragmentView) 
             add(HeaderSetting(R.string.cpu_hacks, R.string.hacks_description))
             add(
                 SwitchSetting(
-                    IntSetting.ENABLE_CUSTOM_CPU_TICKS,
+                    BooleanSetting.ENABLE_CUSTOM_CPU_TICKS,
                     R.string.enable_custom_cpu_ticks,
                     R.string.enable_custom_cpu_ticks_description,
-                    IntSetting.ENABLE_CUSTOM_CPU_TICKS.key,
-                    IntSetting.ENABLE_CUSTOM_CPU_TICKS.defaultValue
+                    BooleanSetting.ENABLE_CUSTOM_CPU_TICKS.key,
+                    BooleanSetting.ENABLE_CUSTOM_CPU_TICKS.defaultValue
                 )
             )
             add(
