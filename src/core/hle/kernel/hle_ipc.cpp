@@ -1,5 +1,6 @@
 // Copyright 2017 Citra Emulator Project
 // Copyright 2024 Borked3DS Emulator Project
+// Copyright 2025 Azahar Emulator Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
@@ -55,6 +56,10 @@ public:
         // Copy the translated command buffer back into the thread's command buffer area.
         memory.WriteBlock(*process, thread->GetCommandBufferAddress(), cmd_buff.data(),
                           cmd_buff.size() * sizeof(u32));
+    }
+
+    bool SupportsSerialization() {
+        return !callback.get() || callback->SupportsSerialization();
     }
 
 private:

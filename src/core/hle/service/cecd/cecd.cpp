@@ -1,5 +1,6 @@
 // Copyright 2015 Citra Emulator Project
 // Copyright 2024 Borked3DS Emulator Project
+// Copyright 2025 Azahar Emulator Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
@@ -36,6 +37,7 @@ namespace Service::CECD {
 
 template <class Archive>
 void Module::serialize(Archive& ar, const unsigned int) {
+    DEBUG_SERIALIZATION_POINT;
     ar & cecd_system_save_data_archive;
     ar & cecinfo_event;
     ar & cecinfosys_event;

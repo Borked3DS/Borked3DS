@@ -1,5 +1,6 @@
 // Copyright 2015 Citra Emulator Project
 // Copyright 2024 Borked3DS Emulator Project
+// Copyright 2025 Azahar Emulator Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
@@ -272,6 +273,7 @@ private:
 
     template <class Archive>
     void serialize(Archive& ar, const unsigned int) {
+        DEBUG_SERIALIZATION_POINT;
         ar & my_friend_key;
         ar & my_presence;
         ar & logged_in;

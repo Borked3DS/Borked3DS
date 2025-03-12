@@ -1,5 +1,6 @@
 // Copyright 2014 Citra Emulator Project
 // Copyright 2024 Borked3DS Emulator Project
+// Copyright 2025 Azahar Emulator Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
@@ -353,6 +354,8 @@ void Config::ReadValues() {
         sdl2_config->GetInteger("Camera", "camera_outer_left_flip", 0);
 
     // Miscellaneous
+    ReadSetting("Miscellaneous", Settings::values.delay_start_for_lle_modules);
+    ReadSetting("Miscellaneous", Settings::values.deterministic_async_operations);
 
     // Debugging
     ReadSetting("Debugging", Settings::values.log_filter);

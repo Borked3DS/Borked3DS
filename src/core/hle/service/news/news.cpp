@@ -1,5 +1,6 @@
 // Copyright 2015 Citra Emulator Project
 // Copyright 2024 Borked3DS Emulator Project
+// Copyright 2025 Azahar Emulator Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
@@ -46,6 +47,7 @@ constexpr std::array<u8, 8> news_system_savedata_id{
 
 template <class Archive>
 void Module::serialize(Archive& ar, const unsigned int) {
+    DEBUG_SERIALIZATION_POINT;
     ar & db;
     ar & notification_ids;
     ar & automatic_sync_flag;

@@ -1,5 +1,6 @@
 // Copyright 2014 Citra Emulator Project
 // Copyright 2024 Borked3DS Emulator Project
+// Copyright 2025 Azahar Emulator Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
@@ -55,7 +56,14 @@ public:
     }
 
 private:
+    FixSizeDiskFile() : DiskFile() {};
     u64 size{};
+    template <class Archive>
+    void serialize(Archive& ar, const unsigned int) {
+        ar& boost::serialization::base_object<DiskFile>(*this);
+        ar & size;
+    }
+    friend class boost::serialization::access;
 };
 
 class ExtSaveDataDelayGenerator : public DelayGenerator {
@@ -425,5 +433,6 @@ ResultVal<ArchiveFormatInfo> ArchiveFactory_ExtSaveData::GetFormatInfo(const Pat
 }
 } // namespace FileSys
 
+BOOST_CLASS_EXPORT(FileSys::FixSizeDiskFile)
 SERIALIZE_EXPORT_IMPL(FileSys::ExtSaveDataDelayGenerator)
 SERIALIZE_EXPORT_IMPL(FileSys::ExtSaveDataArchive)

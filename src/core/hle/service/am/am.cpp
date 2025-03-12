@@ -2414,6 +2414,7 @@ void Module::Interface::EndImportTicket(Kernel::HLERequestContext& ctx) {
 
 template <class Archive>
 void Module::serialize(Archive& ar, const unsigned int) {
+    DEBUG_SERIALIZATION_POINT;
     ar & cia_installing;
     ar & am_title_list;
     ar & system_updater_mutex;

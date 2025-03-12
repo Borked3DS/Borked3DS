@@ -284,6 +284,10 @@ public:
         return true;
     }
 
+    virtual bool DoingInitialSetup() {
+        return false;
+    }
+
 protected:
     Core::System& system;
     FileUtil::IOFile file;

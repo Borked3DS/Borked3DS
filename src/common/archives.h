@@ -1,5 +1,6 @@
 // Copyright 2020 Citra Emulator Project
 // Copyright 2024 Borked3DS Emulator Project
+// Copyright 20025 Azahar Emulator Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
@@ -20,3 +21,8 @@ using oarchive = boost::archive::binary_oarchive;
     BOOST_CLASS_EXPORT_IMPLEMENT(A)                                                                \
     BOOST_SERIALIZATION_REGISTER_ARCHIVE(iarchive)                                                 \
     BOOST_SERIALIZATION_REGISTER_ARCHIVE(oarchive)
+
+#define DEBUG_SERIALIZATION_POINT                                                                  \
+    do {                                                                                           \
+        LOG_DEBUG(Savestate, "");                                                                  \
+    } while (0)

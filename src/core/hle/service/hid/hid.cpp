@@ -1,5 +1,6 @@
 // Copyright 2015 Citra Emulator Project
 // Copyright 2024 Borked3DS Emulator Project
+// Copyright 2025 Azahar Emulator Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
@@ -33,6 +34,7 @@ namespace Service::HID {
 
 template <class Archive>
 void Module::serialize(Archive& ar, const unsigned int file_version) {
+    DEBUG_SERIALIZATION_POINT;
     ar & shared_mem;
     ar & event_pad_or_touch_1;
     ar & event_pad_or_touch_2;

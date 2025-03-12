@@ -1,5 +1,10 @@
 // Copyright 2014 Citra Emulator Project
 // Copyright 2024 Borked3DS Emulator Project / PPSSPP Project
+// Copyright 2025 Azahar Emulator Project
+// Licensed under GPLv2 or any later version
+// Refer to the license.txt file included.
+
+// PPSSPP Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
@@ -67,6 +72,10 @@ public:
     virtual ~WakeupCallback() = default;
     virtual void WakeUp(ThreadWakeupReason reason, std::shared_ptr<Thread> thread,
                         std::shared_ptr<WaitObject> object) = 0;
+
+    virtual bool SupportsSerialization() {
+        return true;
+    }
 
 private:
     template <class Archive>
