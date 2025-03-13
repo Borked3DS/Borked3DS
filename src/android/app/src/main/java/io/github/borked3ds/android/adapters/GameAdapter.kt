@@ -9,6 +9,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Icon
 import android.net.Uri
@@ -21,7 +23,11 @@ import android.widget.ImageView
 import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.net.toUri
+import androidx.core.graphics.scale
+import androidx.core.content.edit
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.findNavController
@@ -40,6 +46,7 @@ import io.github.borked3ds.android.HomeNavigationDirections
 import io.github.borked3ds.android.R
 import io.github.borked3ds.android.adapters.GameAdapter.GameViewHolder
 import io.github.borked3ds.android.databinding.CardGameBinding
+import io.github.borked3ds.android.databinding.DialogShortcutBinding
 import io.github.borked3ds.android.features.cheats.ui.CheatsFragmentDirections
 import io.github.borked3ds.android.fragments.IndeterminateProgressDialogFragment
 import io.github.borked3ds.android.model.Game
@@ -58,7 +65,8 @@ sealed class GameListItem {
 
 class GameAdapter(
     private val activity: AppCompatActivity,
-    private val layoutInflater: LayoutInflater
+    private val layoutInflater: LayoutInflater,
+    private val openImageLauncher: ActivityResultLauncher<String>?
 ) : ListAdapter<GameListItem, RecyclerView.ViewHolder>(
     AsyncDifferConfig.Builder(DiffCallback()).build()
 ),
@@ -67,6 +75,17 @@ class GameAdapter(
     private val gameView = 0
     private val favoriteGameView = 1
     private var lastClickTime = 0L
+    private var imagePath: String? = null
+    private var dialogShortcutBinding: DialogShortcutBinding? = null
+
+    fun handleShortcutImageResult(uri: Uri?) {
+        val path = uri?.toString()
+        if (path != null) {
+            imagePath = path
+            dialogShortcutBinding!!.imageScaleSwitch.isEnabled = imagePath != null
+            refreshShortcutDialogIcon()
+        }
+    }
 
     override fun getItemViewType(position: Int): Int {
         return when (currentList[position]) {
@@ -483,22 +502,67 @@ class GameAdapter(
         }
 
         bottomSheetView.findViewById<MaterialButton>(R.id.game_shortcut).setOnClickListener {
-            val shortcutManager = activity.getSystemService(ShortcutManager::class.java)
+            val preferences = PreferenceManager.getDefaultSharedPreferences(context)
 
-            CoroutineScope(Dispatchers.IO).launch {
-                val bitmap =
-                    (bottomSheetView.findViewById<ImageView>(R.id.game_icon).drawable as BitmapDrawable).bitmap
-                val icon = Icon.createWithBitmap(bitmap)
-
-                val shortcut = ShortcutInfo.Builder(context, game.title)
-                    .setShortLabel(game.title)
-                    .setIcon(icon)
-                    .setIntent(game.launchIntent.apply {
-                        putExtra("launched_from_shortcut", true)
-                    })
-                    .build()
-                shortcutManager.requestPinShortcut(shortcut, null)
+            // Default to false for zoomed in shortcut icons
+            preferences.edit() {
+                putBoolean(
+                    "shouldStretchIcon",
+                    false
+                )
             }
+
+            dialogShortcutBinding = DialogShortcutBinding.inflate(activity.layoutInflater)
+
+            dialogShortcutBinding!!.shortcutNameInput.setText(game.title)
+            GameIconUtils.loadGameIcon(activity, game, dialogShortcutBinding!!.shortcutIcon)
+
+            dialogShortcutBinding!!.shortcutIcon.setOnClickListener {
+                openImageLauncher?.launch("image/*")
+            }
+
+            dialogShortcutBinding!!.imageScaleSwitch.setOnCheckedChangeListener { _, isChecked ->
+                preferences.edit {
+                    putBoolean(
+                        "shouldStretchIcon",
+                        isChecked
+                    )
+                }
+                refreshShortcutDialogIcon()
+            }
+
+            MaterialAlertDialogBuilder(context)
+                .setTitle(R.string.create_shortcut)
+                .setView(dialogShortcutBinding!!.root)
+                .setPositiveButton(android.R.string.ok) { _, _ ->
+                    val shortcutName = dialogShortcutBinding!!.shortcutNameInput.text.toString()
+                    if (shortcutName.isEmpty()) {
+                        Toast.makeText(context, R.string.shortcut_name_empty, Toast.LENGTH_LONG).show()
+                        return@setPositiveButton
+                    }
+                    val iconBitmap = (dialogShortcutBinding!!.shortcutIcon.drawable as BitmapDrawable).bitmap
+                    val shortcutManager = activity.getSystemService(ShortcutManager::class.java)
+
+                    CoroutineScope(Dispatchers.IO).launch {
+                        val icon = Icon.createWithBitmap(iconBitmap)
+                        val shortcut = ShortcutInfo.Builder(context, shortcutName)
+                            .setShortLabel(shortcutName)
+                            .setIcon(icon)
+                            .setIntent(game.launchIntent.apply {
+                                putExtra("launchedFromShortcut", true)
+                            })
+                            .build()
+
+                        shortcutManager?.requestPinShortcut(shortcut, null)
+                        imagePath = null
+                    }
+                }
+                .setNegativeButton(android.R.string.cancel) { _, _ ->
+                    imagePath = null
+                }
+                .show()
+
+            bottomSheetDialog.dismiss()
         }
 
         bottomSheetView.findViewById<MaterialButton>(R.id.cheats).setOnClickListener {
@@ -547,6 +611,47 @@ class GameAdapter(
 
         bottomSheetDialog.show()
     }
+
+    private fun refreshShortcutDialogIcon() {
+        if (imagePath != null) {
+            val originalBitmap = BitmapFactory.decodeStream(
+                Borked3DSApplication.appContext.contentResolver.openInputStream(
+                    imagePath!!.toUri()
+                )
+            )
+            val scaledBitmap = {
+                val preferences =
+                    PreferenceManager.getDefaultSharedPreferences(Borked3DSApplication.appContext)
+                if (preferences.getBoolean("shouldStretchIcon", true)) {
+                    // stretch to fit
+                    originalBitmap.scale(108, 108)
+                } else {
+                    // Zoom in to fit the bitmap while keeping the aspect ratio
+                    val width = originalBitmap.width
+                    val height = originalBitmap.height
+                    val targetSize = 108
+
+                    if (width > height) {
+                        // Landscape orientation
+                        val scaleFactor = targetSize.toFloat() / height
+                        val scaledWidth = (width * scaleFactor).toInt()
+                        val scaledBmp = originalBitmap.scale(scaledWidth, targetSize)
+
+                        val startX = (scaledWidth - targetSize) / 2
+                        Bitmap.createBitmap(scaledBmp, startX, 0, targetSize, targetSize)
+                    } else {
+                        val scaleFactor = targetSize.toFloat() / width
+                        val scaledHeight = (height * scaleFactor).toInt()
+                        val scaledBmp = originalBitmap.scale(targetSize, scaledHeight)
+
+                        val startY = (scaledHeight - targetSize) / 2
+                        Bitmap.createBitmap(scaledBmp, 0, startY, targetSize, targetSize)
+                    }
+                }
+            }()
+                dialogShortcutBinding!!.shortcutIcon.setImageBitmap(scaledBitmap)
+            }
+        }
 
     private fun isValidGame(extension: String): Boolean {
         return Game.badExtensions.stream()
