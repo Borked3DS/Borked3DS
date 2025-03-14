@@ -54,6 +54,7 @@ enum class BooleanSetting(
     GDB_STUB("use_gdbstub", Settings.SECTION_DEBUG, false),
     DEBUG_RENDERER("renderer_debug", Settings.SECTION_DEBUG, false),
     INSTANT_DEBUG_LOG("instant_debug_log", Settings.SECTION_DEBUG, true),
+    UPRIGHT_SCREEN("upright_screen", Settings.SECTION_LAYOUT, false),
     RECORD_FRAME_TIMES("record_frame_times", Settings.SECTION_DEBUG, false),
     DUMP_COMMAND_BUFFERS("dump_command_buffers", Settings.SECTION_DEBUG, false),
     SWAP_SCREEN("swap_screen", Settings.SECTION_LAYOUT, false),

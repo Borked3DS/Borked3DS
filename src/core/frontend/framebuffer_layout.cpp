@@ -40,11 +40,11 @@ FramebufferLayout DefaultFrameLayout(u32 width, u32 height, bool swapped, bool u
                             Settings::SmallScreenPosition::BelowLarge);
 }
 
-FramebufferLayout PortraitTopFullFrameLayout(u32 width, u32 height, bool swapped) {
+FramebufferLayout PortraitTopFullFrameLayout(u32 width, u32 height, bool swapped, bool upright) {
     ASSERT(width > 0);
     ASSERT(height > 0);
     const float scale_factor = swapped ? 1.25f : 0.8f;
-    FramebufferLayout res = LargeFrameLayout(width, height, swapped, false, scale_factor,
+    FramebufferLayout res = LargeFrameLayout(width, height, swapped, upright, scale_factor,
                                              Settings::SmallScreenPosition::BelowLarge);
     const int shiftY = -(int)(swapped ? res.bottom_screen.top : res.top_screen.top);
     res.top_screen = res.top_screen.TranslateY(shiftY);
@@ -387,7 +387,8 @@ FramebufferLayout FrameLayoutFromResolutionScale(u32 res_scale, bool is_secondar
                          res_scale +
                      gap;
             layout =
-                PortraitTopFullFrameLayout(width, height, Settings::values.swap_screen.GetValue());
+                PortraitTopFullFrameLayout(width, height, Settings::values.swap_screen.GetValue(),
+                                           Settings::values.upright_screen.GetValue());
             break;
         case Settings::PortraitLayoutOption::PortraitOriginal:
             width = Core::kScreenTopWidth * res_scale;
