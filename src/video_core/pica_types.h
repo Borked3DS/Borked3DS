@@ -1,5 +1,6 @@
 // Copyright 2015 Citra Emulator Project
 // Copyright 2024 Borked3DS Emulator Project
+// Copyright 2025 Azahar Emulator Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
@@ -200,7 +201,7 @@ public:
     }
 
 private:
-    static constexpr u32 MASK = (1 << (M + E + 1)) - 1;
+    static constexpr u32 MASK = static_cast<u32>(1 << (M + E + 1)) - 1;
     static constexpr u32 MANTISSA_MASK = (1 << M) - 1;
     static constexpr u32 EXPONENT_MASK = (1 << E) - 1;
 
@@ -215,6 +216,7 @@ private:
     }
 };
 
+using f31 = Pica::Float<23, 7>;
 using f24 = Pica::Float<16, 7>;
 using f20 = Pica::Float<12, 7>;
 using f16 = Pica::Float<10, 5>;

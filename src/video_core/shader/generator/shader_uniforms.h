@@ -1,5 +1,6 @@
 // Copyright 2023 Citra Emulator Project
 // Copyright 2024 Borked3DS Emulator Project
+// Copyright 2025 Azahar Emulator Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
@@ -87,7 +88,8 @@ struct PicaUniformsData {
 };
 
 struct VSUniformData {
-    u32 enable_clip1;
+    alignas(4) bool enable_clip1;
+    alignas(4) bool flip_viewport;
     alignas(16) Common::Vec4f clip_coef;
 };
 static_assert(sizeof(VSUniformData) == 32,

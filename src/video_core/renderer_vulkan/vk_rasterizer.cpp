@@ -1,5 +1,6 @@
 // Copyright 2023 Citra Emulator Project
 // Copyright 2024 Borked3DS Emulator Project
+// Copyright 2025 Azahar Emulator Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
@@ -516,6 +517,12 @@ bool RasterizerVulkan::Draw(bool accelerate, bool is_indexed) {
         pipeline_cache.UseFragmentShader(regs, user_config);
         shader_dirty = false;
     }
+
+    // If the framebuffer is flipped, request to also flip vulkan viewport
+    const bool is_flipped = regs.framebuffer.framebuffer.IsFlipped();
+    vs_uniform_block_data.dirty |= vs_uniform_block_data.data.flip_viewport != is_flipped;
+    vs_uniform_block_data.data.flip_viewport = is_flipped;
+    pipeline_info.rasterization.flip_viewport.Assign(is_flipped);
 
     // Sync the LUTs within the texture buffer
     SyncAndUploadLUTs();

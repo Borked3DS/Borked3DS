@@ -1,5 +1,10 @@
-// Copyright 2013 Dolphin Emulator Project / 2014 Citra Emulator Project
+// Copyright 2013 Dolphin Emulator Project
+// Copyright 2014 Citra Emulator Project
 // Copyright 2024 Borked3DS Emulator Project
+// Copyright 2025 Azahar Emulator Project
+// Licensed under GPLv2 or any later version
+// Refer to the license.txt file included.
+
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
@@ -23,6 +28,12 @@ struct Rectangle {
 
     constexpr Rectangle(T left, T top, T right, T bottom)
         : left(left), top(top), right(right), bottom(bottom) {}
+
+    template <typename U>
+    operator Rectangle<U>() const {
+        return Rectangle<U>{static_cast<U>(left), static_cast<U>(top), static_cast<U>(right),
+                            static_cast<U>(bottom)};
+    }
 
     [[nodiscard]] constexpr bool operator==(const Rectangle<T>& rhs) const {
         return (left == rhs.left) && (top == rhs.top) && (right == rhs.right) &&
@@ -55,6 +66,9 @@ struct Rectangle {
     [[nodiscard]] Rectangle<T> Scale(const float s) const {
         return Rectangle{left, top, static_cast<T>(left + GetWidth() * s),
                          static_cast<T>(top + GetHeight() * s)};
+    }
+    [[nodiscard]] Rectangle<T> VerticalMirror(T ref_height) const {
+        return Rectangle{left, ref_height - bottom, right, ref_height - top};
     }
 };
 

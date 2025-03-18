@@ -1,5 +1,6 @@
 // Copyright 2023 Citra Emulator Project
 // Copyright 2024 Borked3DS Emulator Project
+// Copyright 2025 Azahar Emulator Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
@@ -178,13 +179,13 @@ inline vk::PrimitiveTopology PrimitiveTopology(Pica::PipelineRegs::TriangleTopol
     return vk::PrimitiveTopology::eTriangleList;
 }
 
-inline vk::CullModeFlags CullMode(Pica::RasterizerRegs::CullMode mode) {
+inline vk::CullModeFlags CullMode(Pica::RasterizerRegs::CullMode mode, bool flip_viewport) {
     switch (mode) {
     case Pica::RasterizerRegs::CullMode::KeepAll:
         return vk::CullModeFlagBits::eNone;
     case Pica::RasterizerRegs::CullMode::KeepClockWise:
     case Pica::RasterizerRegs::CullMode::KeepCounterClockWise:
-        return vk::CullModeFlagBits::eBack;
+        return flip_viewport ? vk::CullModeFlagBits::eFront : vk::CullModeFlagBits::eBack;
     default:
         UNREACHABLE_MSG("Unknown cull mode {}", mode);
     }

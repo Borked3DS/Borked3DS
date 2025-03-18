@@ -1,5 +1,6 @@
 // Copyright 2017 Citra Emulator Project
 // Copyright 2024 Borked3DS Emulator Project
+// Copyright 2025 Azahar Emulator Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
@@ -30,11 +31,13 @@ struct RasterizerRegs {
 
     BitField<0, 24, u32> viewport_size_x;
 
-    INSERT_PADDING_WORDS(0x1);
+    BitField<1, 31, u32> viewport_size_x_inv;
 
     BitField<0, 24, u32> viewport_size_y;
 
-    INSERT_PADDING_WORDS(0x3);
+    BitField<1, 31, u32> viewport_size_y_inv;
+
+    INSERT_PADDING_WORDS(0x2);
 
     BitField<0, 1, u32> clip_enable;
     BitField<0, 24, u32> clip_coef[4]; // float24

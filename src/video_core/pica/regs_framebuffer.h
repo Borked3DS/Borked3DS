@@ -1,5 +1,6 @@
 // Copyright 2017 Citra Emulator Project
 // Copyright 2024 Borked3DS Emulator Project
+// Copyright 2025 Azahar Emulator Project
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
@@ -234,6 +235,7 @@ struct FramebufferRegs {
             // GetWidth() and GetHeight() instead.
             BitField<0, 11, u32> width;
             BitField<12, 10, u32> height;
+            BitField<24, 1, u32> flip;
         };
 
         INSERT_PADDING_WORDS(0x1);
@@ -251,6 +253,10 @@ struct FramebufferRegs {
 
         inline u32 GetHeight() const {
             return height + 1;
+        }
+
+        inline bool IsFlipped() const {
+            return !flip.Value();
         }
     } framebuffer;
 
