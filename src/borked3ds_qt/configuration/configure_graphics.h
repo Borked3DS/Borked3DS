@@ -36,6 +36,7 @@ private:
     void SetupPerGameUI();
     void SetPhysicalDeviceComboVisibility(int index);
 
+    ConfigurationShared::CheckState use_gles;
     ConfigurationShared::CheckState use_hw_shader;
     ConfigurationShared::CheckState shaders_accurate_mul;
     ConfigurationShared::CheckState skip_slow_draw;

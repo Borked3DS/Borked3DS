@@ -173,6 +173,7 @@ void ConfigureGraphics::SetConfiguration() {
             static_cast<int>(Settings::values.texture_sampling.GetValue()));
     }
 
+    ui->toggle_use_gles->setChecked(Settings::values.use_gles.GetValue());
     ui->toggle_hw_shader->setChecked(Settings::values.use_hw_shader.GetValue());
     ui->toggle_accurate_mul->setChecked(Settings::values.shaders_accurate_mul.GetValue());
     ui->toggle_disk_shader_cache->setChecked(Settings::values.use_disk_shader_cache.GetValue());
@@ -209,6 +210,8 @@ void ConfigureGraphics::ApplyConfiguration() {
                                              ui->physical_device_combo);
     ConfigurationShared::ApplyPerGameSetting(&Settings::values.async_shader_compilation,
                                              ui->toggle_async_shaders, async_shader_compilation);
+    ConfigurationShared::ApplyPerGameSetting(&Settings::values.use_gles, ui->toggle_use_gles,
+                                             use_gles);
     ConfigurationShared::ApplyPerGameSetting(&Settings::values.async_presentation,
                                              ui->toggle_async_present, async_presentation);
     ConfigurationShared::ApplyPerGameSetting(&Settings::values.skip_slow_draw,
@@ -315,6 +318,8 @@ void ConfigureGraphics::SetupPerGameUI() {
     ConfigurationShared::SetColoredTristate(ui->toggle_async_shaders,
                                             Settings::values.async_shader_compilation,
                                             async_shader_compilation);
+    ConfigurationShared::SetColoredTristate(ui->toggle_use_gles, Settings::values.use_gles,
+                                            use_gles);
     ConfigurationShared::SetColoredTristate(
         ui->toggle_async_present, Settings::values.async_presentation, async_presentation);
     ConfigurationShared::SetColoredTristate(ui->toggle_skip_slow_draw,
@@ -360,6 +365,7 @@ void ConfigureGraphics::SetPhysicalDeviceComboVisibility(int index) {
         effective_api = static_cast<Settings::GraphicsAPI>(index);
     }
 
+    ui->toggle_use_gles->setVisible(effective_api == Settings::GraphicsAPI::OpenGL);
     ui->physical_device_group->setVisible(effective_api == Settings::GraphicsAPI::Vulkan);
     ui->spirv_shader_gen->setVisible(effective_api == Settings::GraphicsAPI::Vulkan);
     ui->toggle_geometry_shader->setVisible(effective_api == Settings::GraphicsAPI::Vulkan);

@@ -227,6 +227,7 @@ void RestoreGlobalState(bool is_powered_on) {
     // Renderer
     values.graphics_api.SetGlobal(true);
     values.physical_device.SetGlobal(true);
+    values.use_gles.SetGlobal(true);
     values.spirv_shader_gen.SetGlobal(true);
     values.geometry_shader.SetGlobal(true);
     values.use_sample_shading.SetGlobal(true);

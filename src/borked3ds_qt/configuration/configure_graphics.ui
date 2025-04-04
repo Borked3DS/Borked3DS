@@ -62,10 +62,16 @@
             <property name="text">
              <string>OpenGL (default)</string>
             </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use OpenGL renderer. Minimum requirement for GPU support is OpenGL 4.3.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
            </item>
            <item>
             <property name="text">
              <string>Vulkan</string>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use Vulkan renderer. Minimum requirement for GPU support is Vulkan 1.2. Best results with Vulkan 1.3 or greater.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
            </item>
           </widget>
@@ -103,7 +109,7 @@
       </item>
       <item>
        <widget class="QWidget" name="opengl_renderer_group" native="true">
-        <layout class="QHBoxLayout" name="opengl_renderer_group_2">
+        <layout class="QGridLayout" name="opengl_renderer_group_2">
          <property name="leftMargin">
           <number>0</number>
          </property>
@@ -116,15 +122,25 @@
          <property name="bottomMargin">
           <number>0</number>
          </property>
-         <item>
+         <item row="0" column="0">
           <widget class="QLabel" name="opengl_renderer_label">
            <property name="text">
             <string>OpenGL Renderer</string>
            </property>
           </widget>
          </item>
-         <item>
+         <item row="0" column="1">
           <widget class="QLabel" name="opengl_renderer_name_label"/>
+         </item>
+         <item row="1" column="0">
+          <widget class="QCheckBox" name="toggle_use_gles">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use OpenGLES extensions instead of regular OpenGL. Primarily for use with GPUs on embedded systems. Minimum requirement for GPU support is OpenGLES 3.1. Best results with OpenGLES 3.2 or greater.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string>Use GLES extensions</string>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>
